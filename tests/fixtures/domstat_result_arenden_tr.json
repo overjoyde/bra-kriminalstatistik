@@ -1,0 +1,171 @@
+{
+ "columns": [
+  {
+   "code": "Domstol",
+   "text": "Domstol",
+   "type": "d"
+  },
+  {
+   "code": "Målkategori",
+   "text": "Målkategori",
+   "type": "d"
+  },
+  {
+   "code": "Variabel",
+   "text": "Variabel",
+   "type": "d"
+  },
+  {
+   "code": "År",
+   "text": "År",
+   "type": "t"
+  },
+  {
+   "code": "02b. Inkomna, avgjorda och balanserade ärenden per målkategori vid tingsrätt",
+   "text": "02b. Inkomna, avgjorda och balanserade ärenden per målkategori vid tingsrätt",
+   "type": "c"
+  }
+ ],
+ "comments": [],
+ "data": [
+  {
+   "key": [
+    "All district courts",
+    "Debt clearance matters",
+    "Number of filed matters",
+    "22"
+   ],
+   "values": [
+    "3066"
+   ]
+  },
+  {
+   "key": [
+    "All district courts",
+    "Debt clearance matters",
+    "Number of filed matters",
+    "23"
+   ],
+   "values": [
+    "3174"
+   ]
+  },
+  {
+   "key": [
+    "All district courts",
+    "Debt clearance matters",
+    "Number of determined matters",
+    "22"
+   ],
+   "values": [
+    "3050"
+   ]
+  },
+  {
+   "key": [
+    "All district courts",
+    "Debt clearance matters",
+    "Number of determined matters",
+    "23"
+   ],
+   "values": [
+    "3166"
+   ]
+  },
+  {
+   "key": [
+    "All district courts",
+    "Debt clearance matters",
+    "Number of pending matters December 31",
+    "22"
+   ],
+   "values": [
+    "323"
+   ]
+  },
+  {
+   "key": [
+    "All district courts",
+    "Debt clearance matters",
+    "Number of pending matters December 31",
+    "23"
+   ],
+   "values": [
+    "331"
+   ]
+  },
+  {
+   "key": [
+    "Attunda",
+    "Debt clearance matters",
+    "Number of filed matters",
+    "22"
+   ],
+   "values": [
+    "121"
+   ]
+  },
+  {
+   "key": [
+    "Attunda",
+    "Debt clearance matters",
+    "Number of filed matters",
+    "23"
+   ],
+   "values": [
+    "137"
+   ]
+  },
+  {
+   "key": [
+    "Attunda",
+    "Debt clearance matters",
+    "Number of determined matters",
+    "22"
+   ],
+   "values": [
+    "113"
+   ]
+  },
+  {
+   "key": [
+    "Attunda",
+    "Debt clearance matters",
+    "Number of determined matters",
+    "23"
+   ],
+   "values": [
+    "143"
+   ]
+  },
+  {
+   "key": [
+    "Attunda",
+    "Debt clearance matters",
+    "Number of pending matters December 31",
+    "22"
+   ],
+   "values": [
+    "22"
+   ]
+  },
+  {
+   "key": [
+    "Attunda",
+    "Debt clearance matters",
+    "Number of pending matters December 31",
+    "23"
+   ],
+   "values": [
+    "16"
+   ]
+  }
+ ],
+ "metadata": [
+  {
+   "updated": "2026-03-10T08:30:00Z",
+   "label": "02b. Inkomna, avgjorda och balanserade ärenden per målkategori vid tingsrätt efter Domstol, Målkategori, Variabel och År",
+   "source": "Domstolsverket"
+  }
+ ]
+}

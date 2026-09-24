@@ -1,0 +1,23 @@
+{
+  "beskrivning": "Rekommenderade serier ur Domstolsverkets statistikdatabas DOMstat som kompletterar Brås brottsstatistik: domstolsledet i lagföringskedjan (brottmål, handläggningstider, häktning, unga), insolvens (konkurser, företagsrekonstruktion, skuldsanering) och överprövning. All data är årsvis. Används av scripts/domstat_watchlist.py. 'urval' anges med DOMstat:s svenska texter – verifiera med domstat_catalog.py --table <tabell>.",
+  "standard": {"ar": "2010-"},
+  "serier": [
+    {"namn": "brottmal_tingsratt", "kategori": "Lagföringskedjan – volymer", "tabell": "AntalMal/02a_Malutveckling_per_malkategori_TR", "urval": {"Målkategori": ["Brottmål"]}},
+    {"namn": "brottmal_hovratt", "kategori": "Lagföringskedjan – volymer", "tabell": "AntalMal/03_Malutveckling_per_malkategori_HR", "urval": {"Målkategori": ["Brottmål"]}},
+    {"namn": "brottmal_hogsta_domstolen", "kategori": "Lagföringskedjan – volymer", "tabell": "AntalMal/04_Malutveckling_per_malkategori_HD", "urval": {"Målkategori": ["Brottmål"]}},
+    {"namn": "brottmal_balansalder_tingsratt", "kategori": "Lagföringskedjan – tider", "tabell": "Alder/02_Alder_TR", "urval": {"Domstol": ["Alla tingsrätter"], "Målkategori": ["Brottmål"]}},
+    {"namn": "brottmal_handlaggningstid_tingsratt", "kategori": "Lagföringskedjan – tider", "tabell": "Verksamhetsmal/01_Verksamhetsmal_TR", "urval": {"Verksamhetsmålskategori": ["Brottmål exkl. förtursmål"]}},
+    {"namn": "brottmal_handlaggningstid_hovratt", "kategori": "Lagföringskedjan – tider", "tabell": "Verksamhetsmal/02_Verksamhetsmal_HR", "urval": {"Verksamhetsmålskategori": ["Brottmål exkl. förtursmål"]}},
+    {"namn": "snabbare_lagforing_tingsratt", "kategori": "Lagföringskedjan – tider", "tabell": "Snabbspar/01_Avgjorda_snabbsparsmal_TR", "urval": {"Domstol": ["Alla tingsrätter"]}},
+    {"namn": "snabbare_lagforing_tider", "kategori": "Lagföringskedjan – tider", "tabell": "Snabbspar/02_Snabbsparsmal_omloppstider_TR", "urval": {"Domstol": ["Alla tingsrätter"]}},
+    {"namn": "huvudforhandling_brottmal_tingsratt", "kategori": "Komplexa mål", "tabell": "Forhandling/02_Avgjorda_mal_huvudforhandling_TR", "urval": {"Domstol": ["Alla tingsrätter"], "Målkategori": ["Brottmål"]}},
+    {"namn": "haktnings_och_huvudforhandlingar", "kategori": "Komplexa mål", "tabell": "Forhandling/03_Genomforda_hf_haktning_TR"},
+    {"namn": "installda_huvudforhandlingar", "kategori": "Komplexa mål", "tabell": "Forhandling/04_Installda_hf_TR", "urval": {"Domstol": ["Alla tingsrätter"]}},
+    {"namn": "fortursmal_haktad_minderarig_tingsratt", "kategori": "Unga och häktade", "tabell": "Fortursmal/01_Fortursmal_TR"},
+    {"namn": "ungdomsmal_tingsratt", "kategori": "Unga och häktade", "tabell": "Ungdomsmal/01_Ungdomsmal_TR"},
+    {"namn": "konkurser_tingsratt", "kategori": "Insolvens – företag som brottsverktyg", "tabell": "AntalMal/09_Konkurser_TR"},
+    {"namn": "insolvensarenden_tingsratt", "kategori": "Insolvens – företag som brottsverktyg", "tabell": "AntalMal/02b_Malutveckling_per_malkategori_arenden_TR", "urval": {"Målkategori": ["Konkursärenden", "Företagsrekonstruktioner", "Skuldsanering"]}},
+    {"namn": "andringsfrekvens_brottmal_hovratt", "kategori": "Överprövning", "tabell": "Overklagande/02_Andringsfrekvens_brottmal_HR", "urval": {"Domstol": ["Alla hovrätter"]}},
+    {"namn": "overklagandefrekvens_tingsratt_hovratt", "kategori": "Överprövning", "tabell": "Overklagande/03_Overklagandefrekvens_TR_till_HR"}
+  ]
+}

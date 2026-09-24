@@ -2,7 +2,7 @@
 
 # 📊 bra-kriminalstatistik
 
-**Hämta Sveriges officiella kriminalstatistik från Brå automatiskt och analysera bedrägeri, penningtvätt och terrorfinansiering.**
+**Hämta Sveriges officiella kriminalstatistik från Brå och Domstolsverket automatiskt och analysera bedrägeri, penningtvätt och terrorfinansiering.**
 
 [![ci](https://github.com/overjoyde/bra-kriminalstatistik/actions/workflows/ci.yml/badge.svg)](https://github.com/overjoyde/bra-kriminalstatistik/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.10%2B-3b75af)
@@ -12,7 +12,7 @@
 
 <img src="docs/img/02_modus_r12.png" width="90%" alt="Bedrägerimodus, rullande 12 månader">
 
-[Snabbstart](#-snabbstart) · [Vad kan man göra?](#-vad-kan-man-göra-med-datan) · [Dataseten](#-dataseten) · [Skript](#-skript) · [Kodkatalog AML/CTF](docs/02-brottskoder-aml-ctf-bedrageri.md) · [Teknik](docs/03-teknik-hamtning.md)
+[Snabbstart](#-snabbstart) · [Vad kan man göra?](#-vad-kan-man-göra-med-datan) · [Dataseten](#-dataseten) · [Skript](#-skript) · [Kodkatalog AML/CTF](docs/02-brottskoder-aml-ctf-bedrageri.md) · [Domstolsverket](docs/04-domstolsverket-domstat.md) · [Teknik](docs/03-teknik-hamtning.md)
 
 </div>
 
@@ -24,6 +24,7 @@ Brå publicerar statistik över anmälda, misstänkta och lagförda brott, men *
 |---|---|
 | 🔎 **SOL-klient** | Egna uttag ur Brås statistikdatabas [SOL](https://statistik.bra.se/solwebb/action/index): 1 361 brottskoder och cirka 1 360 brottstyper, per **år, kvartal eller månad**, för **land, polisregion, län eller kommun**, från 1975 och framåt |
 | 📥 **Tabellhämtare** | Cirka 250 färdiga Excel-tabeller från bra.se: anmälda, misstänkta (ålder och kön), lagförda och handlagda brott, målsägare, NTU, diagramdata och rapporter |
+| ⚖️ **Domstolsverket** | Årsdata ur [DOMstat](https://pxweb.etjanst.domstol.se/PxWeb/pxweb/sv/DOMstat/) via dess öppna API: brottmål i tingsrätt/hovrätt/HD, handläggningstider, häktning, ungdomsmål, överklaganden samt **konkurser, företagsrekonstruktioner och skuldsaneringar** per domstol, från 2002 |
 | 🎯 **Bevakningslista** | Ett kommando hämtar 19 färdiga serier om bedrägeri, penningtvätt, terrorfinansiering och sanktioner, på cirka 30 sekunder |
 | 📈 **Analys** | Exempelgrafer, Excel-dashboard och fristående HTML-dashboard. All data sparas som CSV i långt format och passar pandas, Excel, Power BI och R |
 | 📚 **Kodkatalog** | Vilka brottskoder som rör [penningtvätt, CTF, sanktioner och bedrägeri](docs/02-brottskoder-aml-ctf-bedrageri.md), och hur de ändrats över tid |
@@ -174,9 +175,10 @@ Månadsserierna räcker för enkla prognoser och **avvikelselarm**, t.ex. att fl
 | Målsägare | bra.se | offrens ålder och kön | 2014– | `--groups malsagare` |
 | NTU och Skolundersökningen | bra.se | utsatthet, även oanmält | 2007– | `--groups enkater` |
 | Diagramdata från ämnessidor | bra.se | bedrägeri, penningtvätt och terrorfinansiering | varierar | `--groups amnessidor` |
+| **Domstolsledet och insolvens** | Domstolsverket DOMstat (API) | 69 tabeller: domstol × målkategori × år – brottmål, tider, häktning, unga, konkurser, skuldsanering. Ingen brottskodsuppdelning. | 2002– (år) | `domstat_watchlist.py`, `domstat_query.py` |
 | Rapporter och metod (PDF) | bra.se | t.ex. *Företag som brottsverktyg*, *Penningtvättsbrott*, kvalitetsdeklarationer | – | `--groups rapporter metod` |
 
-Detaljer om täckning, sekretess och tolkning finns i [docs/01-datakallor.md](docs/01-datakallor.md).
+Detaljer om täckning, sekretess och tolkning finns i [docs/01-datakallor.md](docs/01-datakallor.md) och, för Domstolsverket, i [docs/04-domstolsverket-domstat.md](docs/04-domstolsverket-domstat.md).
 
 **Format på SOL-uttagen** (CSV, semikolon, UTF-8 med BOM så att filen öppnas rätt i Excel):
 
@@ -197,6 +199,9 @@ befogenhetsbedrageri;Social manipulation (APP-bedrägeri);brottstyp-manad-region
 | SOL: bevakningslista | `scripts/sol_watchlist.py` | `sol_watchlist.sh` | `sol_watchlist.bat` |
 | SOL: eget uttag | `scripts/sol_query.py` | `sol_query.sh` | `sol_query.bat` |
 | SOL: sök eller exportera koder | `scripts/sol_catalog.py` | `sol_catalog.sh` | `sol_catalog.bat` |
+| DOMstat: bevakningslista | `scripts/domstat_watchlist.py` | `domstat_watchlist.sh` | `domstat_watchlist.bat` |
+| DOMstat: eget uttag | `scripts/domstat_query.py` | `domstat_query.sh` | `domstat_query.bat` |
+| DOMstat: sök tabeller | `scripts/domstat_catalog.py` | `domstat_catalog.sh` | `domstat_catalog.bat` |
 | Exempelgrafer och årstabell | `scripts/make_charts.py` | `make_charts.sh` | `make_charts.bat` |
 | Excel- och HTML-dashboard | `scripts/build_excel_dashboard.py`, `build_html_dashboard.py` | `build_dashboards.sh` | `build_dashboards.bat` |
 | Schemalägg månadsvis | – | `schedule_macos.sh` / `schedule_cron.sh` | `schedule_task.bat` |
@@ -239,6 +244,17 @@ df = pd.DataFrame(sol.query("brottstyp-manad-region", crime_ids=["14024"],   # b
 df.pivot_table(index="period", columns="omrade", values="antal").plot()
 ```
 
+### Egna uttag ur Domstolsverkets DOMstat
+
+```bash
+python scripts/domstat_catalog.py --search konkurs                      # hitta tabell
+python scripts/domstat_catalog.py --table AntalMal/09_Konkurser_TR      # visa variabler och värden
+python scripts/domstat_query.py --table AntalMal/02b_Malutveckling_per_malkategori_arenden_TR \
+    --select "Domstol=Alla tingsrätter" "Målkategori=Skuldsanering,Konkursärenden" --years 2015-
+```
+
+Värden väljs med de svenska texterna. Se [docs/04-domstolsverket-domstat.md](docs/04-domstolsverket-domstat.md) för tabellöversikt, begränsningar och format.
+
 ### Egen bevakningslista
 
 Kopiera [`config/watchlist_aml_fraud.json`](config/watchlist_aml_fraud.json), lägg till eller ta bort serier och kör `python scripts/sol_watchlist.py --config config/min_lista.json`. En serie anges så här:
@@ -266,15 +282,15 @@ Brå släpper preliminär månadsstatistik cirka 10 dagar efter varje månadsski
 
 ```text
 bra-kriminalstatistik/
-├── brastat/            bibliotek: http.py (klient) · sol.py (SOL) · tabeller.py (bra.se)
+├── brastat/            bibliotek: http.py (klient) · sol.py (SOL) · tabeller.py (bra.se) · domstat.py (Domstolsverket)
 ├── scripts/            kommandoradsskript (se tabellen ovan)
 ├── run/mac-linux/      .sh-skript + schemaläggning
 ├── run/windows/        .ps1 + .bat + schemaläggning
 ├── config/             bevakningslistor (JSON)
-├── docs/               datakällor · kodkatalog AML/CTF · teknik · img/
+├── docs/               datakällor · kodkatalog AML/CTF · teknik · Domstolsverket · img/
 ├── reference/          brottskoder_sol.csv · brottstyper_sol.csv
 ├── tests/              offline-tester (körs i CI på Linux, macOS och Windows)
-└── data/               ← skapas vid körning: sol/ raw/ docs/ dashboard/ charts/ manifest.csv (checkas inte in)
+└── data/               ← skapas vid körning: sol/ domstat/ raw/ docs/ dashboard/ charts/ manifest.csv (checkas inte in)
 ```
 
 ## 🛟 Felsökning
@@ -296,8 +312,8 @@ bra-kriminalstatistik/
 
 ## 📜 Licens och källa
 
-Koden är licensierad under MIT, se [LICENSE](LICENSE). **Datan kommer från Brottsförebyggande rådet (Brå)** och får vidareutnyttjas fritt. Ange *Källa: Brå* när du publicerar. Repot är inte framtaget av eller associerat med Brå.
+Koden är licensierad under MIT, se [LICENSE](LICENSE). **Datan kommer från Brottsförebyggande rådet (Brå)** och får vidareutnyttjas fritt. Ange *Källa: Brå* när du publicerar. Data från DOMstat är Sveriges officiella statistik från **Domstolsverket**; ange *Källa: Domstolsverket*. Repot är inte framtaget av eller associerat med Brå eller Domstolsverket.
 
-Var snäll mot Brås servrar: skripten väntar mellan anropen, och en schemalagd körning per månad räcker.
+Var snäll mot Brås och Domstolsverkets servrar: skripten väntar mellan anropen (DOMstat tillåter högst 10 anrop per 10 sekunder), och en schemalagd körning per månad räcker.
 
 **Bidrag** är välkomna, t.ex. nya serier i bevakningslistan, nya bra.se-tabeller i `brastat/tabeller.py` eller fler analysexempel i `scripts/make_charts.py`. Kör `python -m unittest discover -s tests` innan du skickar en PR.

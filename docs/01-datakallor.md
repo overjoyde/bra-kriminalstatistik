@@ -66,6 +66,8 @@ Hämtas med `scripts/fetch_tables.py`. Filerna hamnar i `data/raw/`, PDF:erna i 
 
 Övriga källor som **inte** automatiseras: NTU:s "Skapa din egen tabell" och specialbeställningar via statistik@bra.se.
 
+Domstolsledet (brottmål, handläggningstider, konkurser, skuldsanering) hämtas från Domstolsverkets DOMstat, se [04-domstolsverket-domstat.md](04-domstolsverket-domstat.md).
+
 ---
 
 ## 3. Förbehåll vid tolkning

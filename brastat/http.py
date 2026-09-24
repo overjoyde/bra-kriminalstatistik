@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 import http.cookiejar
+import json
 import os
 import shutil
 import ssl
@@ -71,31 +72,41 @@ class Client:
         self.use_curl = os.environ.get("BRASTAT_HTTP", "").lower() == "curl"
         self._curl_jar = os.path.join(tempfile.mkdtemp(prefix="brastat-"), "cookies.txt")
 
-    def _curl(self, url: str, body: bytes | None, referer: str | None) -> bytes:
+    def _curl(self, url: str, body: bytes | None, referer: str | None,
+              content_type: str = "application/x-www-form-urlencoded") -> bytes:
         exe = shutil.which("curl") or shutil.which("curl.exe")
         if not exe:
             raise RuntimeError("TLS-verifiering misslyckades och curl saknas. Kör: pip install truststore")
+        # curl --retry räknar 429 (Too Many Requests) som tillfälligt fel och respekterar Retry-After.
         cmd = [exe, "-sSfL", "--retry", str(self.retries), "--max-time", str(int(self.timeout)),
                "-A", USER_AGENT, "-b", self._curl_jar, "-c", self._curl_jar]
         if referer:
             cmd += ["-e", referer]
         if body is not None:
-            cmd += ["--data-binary", "@-", "-H", "Content-Type: application/x-www-form-urlencoded"]
+            cmd += ["--data-binary", "@-", "-H", f"Content-Type: {content_type}"]
         r = subprocess.run(cmd + [url], input=body, capture_output=True)
         if r.returncode != 0:
             raise RuntimeError(f"curl misslyckades ({r.returncode}) för {url}: {r.stderr.decode(errors='replace')}")
         time.sleep(self.delay)
         return r.stdout
 
-    def request(self, url: str, data: dict | None = None, referer: str | None = None) -> bytes:
-        body = urllib.parse.urlencode(data).encode("latin-1") if data is not None else None
+    def request(self, url: str, data: dict | None = None, referer: str | None = None,
+                json_body: object | None = None) -> bytes:
         headers = {"User-Agent": USER_AGENT, "Accept-Encoding": "identity"}
+        content_type = "application/x-www-form-urlencoded"
+        if json_body is not None:
+            body: bytes | None = json.dumps(json_body, ensure_ascii=False).encode("utf-8")
+            content_type = "application/json"
+            headers["Content-Type"] = content_type
+        else:
+            body = urllib.parse.urlencode(data).encode("latin-1") if data is not None else None
         if referer:
             headers["Referer"] = referer
         if self.use_curl:
-            return self._curl(url, body, referer)
+            return self._curl(url, body, referer, content_type)
         last: Exception | None = None
         for attempt in range(self.retries + 1):
+            wait = 1.5 * (attempt + 1)
             try:
                 req = urllib.request.Request(url, data=body, headers=headers)
                 with self.opener.open(req, timeout=self.timeout) as resp:
@@ -103,7 +114,12 @@ class Client:
                 time.sleep(self.delay)
                 return content
             except urllib.error.HTTPError as e:
-                if e.code < 500:
+                if e.code == 429:  # Too Many Requests (t.ex. PxWeb-API:ets anropsgräns)
+                    try:
+                        wait = max(wait, float(e.headers.get("Retry-After") or 10))
+                    except ValueError:
+                        wait = max(wait, 10.0)
+                elif e.code < 500:
                     raise
                 last = e
             except (urllib.error.URLError, TimeoutError, ConnectionError, ssl.SSLError) as e:
@@ -111,9 +127,9 @@ class Client:
                     # Switch permanently to curl for this client (keeps its own cookie jar,
                     # so callers should create the client before starting a SOL session).
                     self.use_curl = True
-                    return self._curl(url, body, referer)
+                    return self._curl(url, body, referer, content_type)
                 last = e
-            time.sleep(1.5 * (attempt + 1))
+            time.sleep(wait)
         raise RuntimeError(f"Kunde inte hämta {url}: {last}")
 
     def get(self, url: str, referer: str | None = None) -> bytes:
@@ -121,6 +137,9 @@ class Client:
 
     def post(self, url: str, data: dict, referer: str | None = None) -> bytes:
         return self.request(url, data, referer)
+
+    def post_json(self, url: str, payload: object, referer: str | None = None) -> bytes:
+        return self.request(url, None, referer, json_body=payload)
 
     def text(self, url: str, encoding: str = "utf-8", **kw) -> str:
         return self.get(url, **kw).decode(encoding, "replace")
