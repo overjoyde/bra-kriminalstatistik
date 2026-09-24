@@ -135,7 +135,7 @@ TEMPLATE = r"""<!doctype html>
   .legend span{display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none}
   .legend span.off{opacity:.35}
   .legend i{width:12px;height:3px;border-radius:2px;display:inline-block}
-  .tip{position:absolute;pointer-events:none;background:var(--tipbg);color:var(--tipfg);border:1px solid var(--line);font-size:12px;padding:7px 9px;border-radius:6px;opacity:0;transition:opacity .1s;white-space:nowrap;z-index:3}
+  .tip{position:fixed;left:0;top:0;pointer-events:none;background:var(--tipbg);color:var(--tipfg);border:1px solid var(--line);font-size:12px;padding:7px 9px;border-radius:6px;opacity:0;transition:opacity .1s;white-space:nowrap;z-index:10}
   .note{font-size:12px;color:var(--muted);line-height:1.5}
   .warn{border-left:4px solid var(--c2);background:var(--warnbg)}
   code{color:var(--ink)}
@@ -285,6 +285,11 @@ function renderKpis(){
 
 // ---------- SVG chart engine ----------
 const tipEl = () => { let t=document.querySelector("body > .tip"); if(!t){t=document.createElement("div");t.className="tip";document.body.appendChild(t);} return t; };
+// position:fixed + viewport-koordinater: tipset kan aldrig vidga sidan, och det byter sida vid kanterna.
+function showTip(tip,e){ tip.style.opacity=1; const w=tip.offsetWidth, h=tip.offsetHeight;
+  const x = e.clientX+14+w > innerWidth-8 ? e.clientX-14-w : e.clientX+14;
+  const y = Math.min(Math.max(8, e.clientY-10), innerHeight-h-8);
+  tip.style.left=Math.max(8,x)+"px"; tip.style.top=y+"px"; }
 function niceStep(v){ const e=Math.pow(10,Math.floor(Math.log10(v))); const f=v/e; return (f<=1?1:f<=2?2:f<=5?5:10)*e; }
 function niceAxis(v){ if(v<=0) return {max:1,step:0.25}; const step=niceStep(v/4); return {max:Math.ceil(v/step-1e-9)*step, step}; }  // gridlines at 1/2/5×10^n
 function axisFmt(v,isPct){ if(isPct) return Math.round(v*1000)/10+" %"; return v>=1000? (v/1000).toLocaleString("sv-SE")+" k" : v.toLocaleString("sv-SE"); }
@@ -313,7 +318,7 @@ function lineChart(id, series, {isPct=false, legendId=null, xLabel=k=>k}={}){
     cur.setAttribute("x1",X(k)); cur.setAttribute("x2",X(k)); cur.setAttribute("opacity",1);
     tip.innerHTML = `<b>${xLabel(k,true)}</b><br>`+series.map((s,i)=>{ if(hidden.has(s.name)) return ""; const p=s.data.find(d=>d[0]===k);
       return p?`<span style="color:${getComputedStyle(document.documentElement).getPropertyValue((s.color||COLORS[i%COLORS.length]).slice(4,-1))}">●</span> ${s.name}: ${isPct?pctPlain(p[1]):fmt(p[1])}<br>`:""; }).join("");
-    tip.style.opacity=1; tip.style.left=(e.pageX+14)+"px"; tip.style.top=(e.pageY-10)+"px"; };
+    showTip(tip,e); };
   svg.onmouseleave = ()=>{ tip.style.opacity=0; cur.setAttribute("opacity",0); };
   if(legendId){ const lg=document.getElementById(legendId);
     lg.innerHTML = series.map((s,i)=>`<span data-n="${s.name}" class="${hidden.has(s.name)?"off":""}"><i style="background:${s.color||COLORS[i%COLORS.length]}"></i>${s.name}</span>`).join("");
@@ -342,7 +347,7 @@ function barChart(id, items, {horizontal=false, isPct=false, color="var(--c1)"}=
   }
   el.innerHTML=`<svg viewBox="0 0 ${W} ${H}">${g}</svg>`;
   el.querySelectorAll(".b").forEach(b=>{ b.onmousemove=e=>{ const d=items[+b.dataset.i]; tip.innerHTML=`<b>${d[0]}</b><br>${isPct||horizontal?pct(d[1]):fmt(d[1])}${d[2]?"<br>"+d[2]:""}`;
-      tip.style.opacity=1; tip.style.left=(e.pageX+14)+"px"; tip.style.top=(e.pageY-10)+"px"; }; b.onmouseleave=()=>tip.style.opacity=0; });
+      showTip(tip,e); }; b.onmouseleave=()=>tip.style.opacity=0; });
 }
 
 // ---------- charts ----------

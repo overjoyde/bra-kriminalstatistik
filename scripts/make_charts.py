@@ -7,6 +7,7 @@ Kräver att dessa körts först:
 
     python scripts/make_charts.py                      # -> data/charts/*.png + arstabell.md
     python scripts/make_charts.py --out docs/img       # (används för README-graferna)
+    python scripts/make_charts.py --theme dark         # bara mörka grafer (*_dark.png); standard är båda
 
 Graferna är exempel på analyser – se README-avsnittet "Vad kan man göra med datan?".
 """
@@ -39,6 +40,29 @@ plt.rcParams.update({
     "legend.fontsize": 9, "axes.formatter.use_locale": False,
 })
 
+# Teman. Mörkt följer HTML-dashboardens mörka palett, så att samma serie har samma
+# färg i båda. Mörka filer får suffixet _dark; de ljusa behåller sina namn.
+THEMES = {
+    "light": {"colors": ("#3b75af", "#ef8636", "#519e3e", "#c53a32", "#8d69b8", "#7f7f7f"),
+              "extra": ("#84584e", "#d57dbf"), "bg": "white", "fg": "black", "suffix": "", "rc": {}},
+    "dark": {"colors": ("#6d9bf7", "#f5a255", "#6cc36a", "#ff8a80", "#b39ddb", "#9aa3b2"),
+             "extra": ("#c9a393", "#e57ad0"), "bg": "#171c25", "fg": "#e3e6eb", "suffix": "_dark",
+             "rc": {"figure.facecolor": "#171c25", "axes.facecolor": "#171c25", "savefig.facecolor": "#171c25",
+                    "axes.edgecolor": "#5c6677", "axes.labelcolor": "#e3e6eb", "text.color": "#e3e6eb",
+                    "xtick.color": "#9aa3b2", "ytick.color": "#9aa3b2", "grid.color": "#5c6677",
+                    "legend.facecolor": "#141922", "legend.edgecolor": "#394254", "legend.labelcolor": "#e3e6eb"}},
+}
+FG, BG, SUFFIX = "black", "white", ""
+
+
+def use_theme(name: str) -> None:
+    """Sätt färgkonstanterna för ett tema. Diagramfunktionerna läser dem vid anropet."""
+    global BLUE, ORANGE, GREEN, RED, PURPLE, GREY, PALETTE, FG, BG, SUFFIX
+    t = THEMES[name]
+    BLUE, ORANGE, GREEN, RED, PURPLE, GREY = t["colors"]
+    PALETTE = [BLUE, ORANGE, GREEN, RED, PURPLE, *t["extra"], GREY]
+    FG, BG, SUFFIX = t["fg"], t["bg"], t["suffix"]
+
 
 def thousands(ax, axis="y"):
     fmt = mtick.FuncFormatter(lambda x, _: f"{x:,.0f}".replace(",", " "))
@@ -48,8 +72,8 @@ def thousands(ax, axis="y"):
 def save(fig, out: Path, name: str, source: str = SOURCE):
     fig.text(0.01, 0.005, source, fontsize=7.5, color=GREY, ha="left", va="bottom")
     fig.tight_layout(rect=(0, 0.03, 1, 1))
-    p = out / name
-    fig.savefig(p, bbox_inches="tight", facecolor="white")
+    p = out / name.replace(".png", f"{SUFFIX}.png")
+    fig.savefig(p, bbox_inches="tight", facecolor=BG)
     plt.close(fig)
     print("  +", p)
 
@@ -127,7 +151,7 @@ def chart_region_ytd(sol, out):
     for i, (col, c) in enumerate(zip(df.columns, (BLUE, ORANGE))):
         bars = ax.bar(xs + (i - 0.5) * w, df[col].values, w, color=c, label=col)
         ax.bar_label(bars, labels=[f"{v:+.0%}" for v in df[col].values], fontsize=7.5, padding=2)
-    ax.axhline(0, color="black", lw=0.8)
+    ax.axhline(0, color=FG, lw=0.8)
     ax.set_xticks(xs, df.index)
     ax.yaxis.set_major_formatter(mtick.PercentFormatter(1.0, decimals=0))
     months = ["jan", "feb", "mar", "apr", "maj", "jun", "jul", "aug", "sep", "okt", "nov", "dec"]
@@ -272,25 +296,37 @@ def annual_table(sol, annual, out):
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--out", help="Katalog för PNG-filer (standard: data/charts)")
+    ap.add_argument("--theme", choices=["light", "dark", "both"], default="both",
+                    help="Ljusa grafer, mörka (filnamn *_dark.png) eller båda (standard)")
     a = ap.parse_args()
     d = data_dir()
     out = Path(a.out) if a.out else d / "charts"
     out.mkdir(parents=True, exist_ok=True)
 
     sol = load_sol(d)
-    chart_monthly(sol, out)
-    chart_modus_r12(sol, out)
-    chart_region_ytd(sol, out)
-    chart_region_per100k(sol, out)
-    chart_forecast(sol, out)
     try:
         import parse_bra as pb
-        annual = pb.annual()
-        chart_elderly(annual, out)
-        chart_suspects(pb.suspects(), out)
-        annual_table(sol, annual, out)
+        annual, susp = pb.annual(), pb.suspects()
     except (FileNotFoundError, ValueError, KeyError, IndexError) as e:
+        annual = susp = None
         print(f"  (hoppar över årstabell/misstänkta – kör fetch_tables.py först: {e})")
+
+    for theme in (["light", "dark"] if a.theme == "both" else [a.theme]):
+        use_theme(theme)
+        with plt.rc_context(THEMES[theme]["rc"]):
+            chart_monthly(sol, out)
+            chart_modus_r12(sol, out)
+            chart_region_ytd(sol, out)
+            chart_region_per100k(sol, out)
+            chart_forecast(sol, out)
+            if annual is not None:
+                try:
+                    chart_elderly(annual, out)
+                    chart_suspects(susp, out)
+                except (ValueError, KeyError, IndexError) as e:
+                    print(f"  (hoppar över äldre/misstänkta: {e})")
+    if annual is not None:
+        annual_table(sol, annual, out)
 
 
 if __name__ == "__main__":
