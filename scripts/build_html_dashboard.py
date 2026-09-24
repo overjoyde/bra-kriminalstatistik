@@ -211,7 +211,9 @@ TEMPLATE = r"""<!doctype html>
 </main>
 <footer>
   Källa: Brottsförebyggande rådet (Brå). Offentlig statistik som får vidareutnyttjas fritt (PSI). Genererad <span id="gen"></span> av <code>scripts/build_html_dashboard.py</code>.
-  Uppdatera så här: <code>python scripts/fetch_tables.py</code> och sedan <code>python scripts/build_html_dashboard.py</code>.
+  <br>Hämta ny data och bygg om allt (tabeller, bevakningslista, dashboards och grafer):
+  <code>./run/mac-linux/fetch_all.sh --no-pdf</code> på macOS/Linux eller <code>run\windows\fetch_all.bat --no-pdf</code> på Windows.
+  Bara dashboarden, från redan hämtad data: <code>build_dashboards</code> i samma mapp.
 </footer>
 
 <script>
