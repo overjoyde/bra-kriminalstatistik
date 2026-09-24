@@ -126,17 +126,26 @@ def find_rows(labels: pd.Series) -> dict[str, int]:
     return found
 
 
+MONTHS_EN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
+
+def file_period(path: str) -> tuple[int, int]:
+    """(year, last month) of a monthly file, e.g. P4LaAug-2026.xlsx -> (2026, 8).
+    Files without a month in the name (P1xLa-2020) count as a full year."""
+    fn = os.path.basename(path)
+    m = re.search(r"(?:(" + "|".join(MONTHS_EN) + r"))?-(\d{4})", fn)
+    if not m:
+        return (0, 0)
+    return int(m.group(2)), (MONTHS_EN.index(m.group(1)) + 1 if m.group(1) else 12)
+
+
 def parse_monthly_file(path: str) -> list[dict]:
     fn = os.path.basename(path)
     m = re.match(r"(P4|P1x)(La|Rn0\d)(?:[A-Za-z]{3})?-(\d{4})", fn)
     if not m:
         return []
     region = REGIONS[m.group(2)]
-    year = int(m.group(3))
-    last_month = 12
-    mm = re.search(r"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)-\d{4}", fn)
-    if mm:
-        last_month = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].index(mm.group(1)) + 1
+    year, last_month = file_period(fn)
 
     df = pd.read_excel(path, sheet_name=0, header=None)
     lc = _label_col(df)
@@ -157,7 +166,10 @@ def parse_monthly_file(path: str) -> list[dict]:
 
 
 def monthly() -> pd.DataFrame:
-    files = sorted(glob.glob(os.path.join(ROOT, "raw/anmalda_brott/tidsserie_manad/*.xls*")))
+    # Each run saves a new file for the current year (P4LaJul-2026, P4LaAug-2026 …).
+    # Sort chronologically, not alphabetically, so drop_duplicates(keep="last") below
+    # keeps the latest publication (alphabetically Sep sorts after Dec).
+    files = sorted(glob.glob(os.path.join(ROOT, "raw/anmalda_brott/tidsserie_manad/*.xls*")), key=file_period)
     rows = [r for f in files for r in parse_monthly_file(f)]
     df = pd.DataFrame(rows)
     df = _drop_early_modus(df)
