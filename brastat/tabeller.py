@@ -68,8 +68,17 @@ class TableFetcher:
         self.last = last_full_year or default_last_full_year()
         self.years = list(range(self.last - years + 1, self.last + 1))
         self.manifest: list[dict] = []
+        self.prev_urls = self._read_prev_urls()
 
     # ---- helpers -------------------------------------------------------
+    def _read_prev_urls(self) -> dict[str, str]:
+        """fil -> URL från förra körningens manifest."""
+        path = self.out / "manifest.csv"
+        if not path.exists():
+            return {}
+        with path.open(encoding="utf-8") as f:
+            return {r["file"]: r["url"] for r in csv.DictReader(f) if r.get("file") and r.get("url")}
+
     def _log(self, **kw):
         self.manifest.append({k: kw.get(k, "") for k in ("group", "file", "url", "status", "bytes", "sha256", "note")})
 
@@ -79,10 +88,14 @@ class TableFetcher:
     def save(self, url: str, dest: Path, group: str, note: str = "") -> None:
         dest.parent.mkdir(parents=True, exist_ok=True)
         status = "cached"
-        if self.force or not dest.exists():
+        # Brås nedladdningslänkar innehåller id och tidsstämpel (/download/18.x/<ms>/fil.xlsx).
+        # Ny länk till samma filnamn = ny version, t.ex. när preliminär statistik fryses.
+        prev = self.prev_urls.get(self._rel(dest))
+        changed = dest.exists() and prev is not None and prev != url
+        if self.force or not dest.exists() or changed:
             try:
                 dest.write_bytes(self.http.get(url))
-                status = "ok"
+                status = "uppdaterad" if changed else "ok"
             except Exception as e:  # noqa: BLE001 – logga och fortsätt
                 self._log(group=group, url=url, status=f"FEL: {e}", bytes=0, note=note)
                 print(f"  x {url}  ({e})")
@@ -90,7 +103,7 @@ class TableFetcher:
         data = dest.read_bytes()
         self._log(group=group, file=self._rel(dest), url=url, status=status, bytes=len(data),
                   sha256=hashlib.sha256(data).hexdigest(), note=note)
-        print(f"  {'+' if status == 'ok' else '.'} {self._rel(dest)}")
+        print(f"  {'.' if status == 'cached' else '+'} {self._rel(dest)}")
 
     def resolve_statpage(self, divurl: str) -> str | None:
         try:
@@ -271,6 +284,6 @@ class TableFetcher:
             w = csv.DictWriter(f, fieldnames=["group", "file", "url", "status", "bytes", "sha256", "note"])
             w.writeheader()
             w.writerows(old + self.manifest)
-        ok = sum(1 for m in self.manifest if m["status"] in ("ok", "cached", "extraherad"))
+        ok = sum(1 for m in self.manifest if m["status"] in ("ok", "uppdaterad", "cached", "extraherad"))
         print(f"\nKlart {dt.datetime.now():%Y-%m-%d %H:%M}: {ok}/{len(self.manifest)} poster OK -> {path}")
         return path

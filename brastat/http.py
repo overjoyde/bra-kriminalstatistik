@@ -5,6 +5,10 @@
   then `certifi`, then Python's default. If verification still fails (e.g. a
   Homebrew/python.org build without CA certs, or a corporate TLS proxy) it falls
   back to the system `curl` binary, which exists on macOS, Linux and Windows 10+.
+- statistik.bra.se sends the wrong intermediate certificate (GeoTrust EV RSA CA 2018
+  instead of DigiCert EV RSA CA G2). macOS/Windows fetch the right one themselves,
+  OpenSSL (Linux, certifi, curl) does not. The correct intermediate is bundled in
+  ``digicert_ev_rsa_ca_g2.pem`` and added to the trust store so Linux works too.
 - Adds a polite delay between requests.
 """
 from __future__ import annotations
@@ -19,28 +23,32 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from pathlib import Path
 
 USER_AGENT = (
     "Mozilla/5.0 (bra-kriminalstatistik; offentlig statistik, "
     "vidareutnyttjande enligt Brås PSI-villkor; +https://github.com/overjoyde/bra-kriminalstatistik)"
 )
 DEFAULT_DELAY = 0.3  # seconds between requests – be nice to bra.se
+# Intermediate missing from statistik.bra.se's chain (see module docstring). Valid until 2030-07-02.
+EXTRA_CA = Path(__file__).with_name("digicert_ev_rsa_ca_g2.pem")
 
 
 def _ssl_context() -> ssl.SSLContext:
     try:
         import truststore  # type: ignore
 
-        return truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     except ImportError:
-        pass
-    ctx = ssl.create_default_context()
-    try:
-        import certifi  # type: ignore
+        ctx = ssl.create_default_context()
+        try:
+            import certifi  # type: ignore
 
-        ctx.load_verify_locations(certifi.where())
-    except ImportError:
-        pass
+            ctx.load_verify_locations(certifi.where())
+        except ImportError:
+            pass
+    if EXTRA_CA.exists():
+        ctx.load_verify_locations(str(EXTRA_CA))
     return ctx
 
 
