@@ -1,0 +1,15 @@
+# Hämtad data och genererade filer (återskapas med skripten)
+data/*
+!data/.gitkeep
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+# OS/editor
+.DS_Store
+Thumbs.db
+~$*
+.idea/
+.vscode/
+run/windows/_scheduled.cmd

@@ -1,0 +1,7 @@
+# Hämtning (SOL + bra.se) kräver bara Pythons standardbibliotek.
+# truststore gör att Python använder operativsystemets certifikatlager (rekommenderas på macOS/Windows).
+truststore>=0.9
+# Tolkning av Excel-tabeller och dashboards
+pandas>=2.0
+openpyxl>=3.1
+xlrd>=2.0

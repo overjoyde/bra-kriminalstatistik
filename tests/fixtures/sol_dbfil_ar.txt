@@ -1,0 +1,20 @@
+Region;Brott;År;Period;Antal;/100 000 inv
+Hela landet;8-12 kap. Brott mot förmögenhet;År;2024;..;..;
+Hela landet;8-12 kap. Brott mot förmögenhet;År;2025;..;..;
+Hela landet;9 kap. Bedrägeri och annan oredlighet;År;2024;..;..;
+Hela landet;9 kap. Bedrägeri och annan oredlighet;År;2025;..;..;
+Hela landet;Bedrägeri inkl. grovt, bedrägligt beteende (1-3 §);År;2024;..;..;
+Hela landet;Bedrägeri inkl. grovt, bedrägligt beteende (1-3 §);År;2025;..;..;
+Hela landet;Bedrägeri genom social manipulation (fr. o. m. 2019);År;2024;..;..;
+Hela landet;Bedrägeri genom social manipulation (fr. o. m. 2019);År;2025;..;..;
+Hela landet;Befogenhetsbedrägeri;År;2024;13816;131;
+Hela landet;Befogenhetsbedrägeri;År;2025;14278;135;
+Hela landet;Lag om straff för penningtvättsbrott;År;2024;19017;180;
+Hela landet;Lag om straff för penningtvättsbrott;År;2025;19571;185;
+Hela landet;Lag om straff för penningtvättsbrott;År;2024;19017;180;
+Hela landet;Lag om straff för penningtvättsbrott;År;2025;19571;185;
+Hela landet;Penningtvättsbrott (3-4 §);År;2024;16598;157;
+Hela landet;Penningtvättsbrott (3-4 §);År;2025;17081;161;
+Region Nord;8-12 kap. Brott mot förmögenhet;År;2024;..;..;
+Region Nord;8-12 kap. Brott mot förmögenhet;År;2025;..;..;
+Region Nord;9 kap. Bedrägeri och annan oredlighet;År;2024;..;..;

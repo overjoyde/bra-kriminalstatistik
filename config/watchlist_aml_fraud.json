@@ -1,0 +1,29 @@
+{
+  "beskrivning": "Rekommenderade SOL-serier för trendbevakning av bedrägeri, penningtvätt, terrorfinansiering och sanktionsbrott. Används av scripts/sol_watchlist.py. Brottstyp-id är SOL:s interna id (stabila i praktiken men inte garanterade) – verifiera med sol_catalog.py.",
+  "standard": {
+    "regioner": ["Hela landet", "Region Nord", "Region Mitt", "Region Stockholm", "Region Öst", "Region Väst", "Region Syd", "Region Bergslagen"],
+    "manad_perioder": "2019-01..2099-12",
+    "ar_perioder": "2015-2099"
+  },
+  "serier": [
+    {"namn": "bedrageri_totalt", "kategori": "Bedrägeri – kontext", "meny": "brottstyp-manad-region", "ids": ["11563"]},
+    {"namn": "social_manipulation", "kategori": "Social manipulation (APP-bedrägeri)", "meny": "brottstyp-manad-region", "ids": ["14021"]},
+    {"namn": "romansbedrageri", "kategori": "Social manipulation (APP-bedrägeri)", "meny": "brottstyp-manad-region", "ids": ["14022"]},
+    {"namn": "investeringsbedrageri", "kategori": "Social manipulation (APP-bedrägeri)", "meny": "brottstyp-manad-region", "ids": ["14023"]},
+    {"namn": "befogenhetsbedrageri", "kategori": "Social manipulation (APP-bedrägeri)", "meny": "brottstyp-manad-region", "ids": ["14024"]},
+    {"namn": "befogenhetsbedrageri_mot_aldre", "kategori": "Social manipulation (APP-bedrägeri)", "meny": "brottskod-manad-region", "koder": ["0950", "0951"]},
+    {"namn": "identitetsbedrageri", "kategori": "Identitetsmissbruk", "meny": "brottstyp-manad-region", "ids": ["14026"]},
+    {"namn": "olovlig_identitetsanvandning", "kategori": "Identitetsmissbruk", "meny": "brottstyp-manad-region", "ids": ["13184"]},
+    {"namn": "fakturabedrageri", "kategori": "Företag som brottsverktyg", "meny": "brottstyp-manad-region", "ids": ["14027"]},
+    {"namn": "annonsbedrageri", "kategori": "Köp/sälj-bedrägeri", "meny": "brottstyp-manad-region", "ids": ["14029"]},
+    {"namn": "kortbedrageri_utan_fysiskt_kort", "kategori": "Kortbedrägeri", "meny": "brottstyp-manad-region", "ids": ["14050"]},
+    {"namn": "olovlig_befattning_betalningsverktyg", "kategori": "Penningtvätt / mule", "meny": "brottstyp-manad-region", "ids": ["14598"]},
+    {"namn": "penningtvatt_totalt", "kategori": "Penningtvätt / mule", "meny": "brottstyp-manad-region", "ids": ["13092"]},
+    {"namn": "naringspenningtvatt", "kategori": "Företag som brottsverktyg", "meny": "brottskod-ar-region", "koder": ["5124", "5125", "5126"], "perioder": "2015-2099"},
+    {"namn": "bulvan_malvakt_abl", "kategori": "Företag som brottsverktyg", "meny": "brottstyp-ar-region", "ids": ["13118"], "regioner": ["Hela landet"]},
+    {"namn": "naringsforbud", "kategori": "Företag som brottsverktyg", "meny": "brottstyp-ar-region", "ids": ["13113"], "regioner": ["Hela landet"]},
+    {"namn": "terrorfinansiering", "kategori": "Terrorfinansiering (CTF)", "meny": "brottskod-ar-region", "koder": ["7035", "7036", "7037"], "perioder": "2023-2099", "regioner": ["Hela landet"]},
+    {"namn": "terrorfinansiering_fore_2023", "kategori": "Terrorfinansiering (CTF)", "meny": "brottskod-ar-region", "koder": ["7004", "7011", "7012", "7013", "7022", "7023", "7024", "7025", "7027", "5050"], "perioder": "2010-2023", "regioner": ["Hela landet"]},
+    {"namn": "sanktionsbrott", "kategori": "Sanktioner", "meny": "brottskod-ar-region", "koder": ["7045", "7046", "7047", "7014", "7015", "7016"], "perioder": "2015-2099", "regioner": ["Hela landet"]}
+  ]
+}

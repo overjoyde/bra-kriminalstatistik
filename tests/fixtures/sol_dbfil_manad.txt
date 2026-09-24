@@ -1,0 +1,4 @@
+Region;Brott;År;Period;Antal;/100 000 inv
+Hela landet;0950 - Befogenhetsbedrägeri, bedrägeri genom social manipulation, internationell anknytning, mot äldre/funktionsnedsatt;2025;Jan;133;1;
+Hela landet;0950 - Befogenhetsbedrägeri, bedrägeri genom social manipulation, internationell anknytning, mot äldre/funktionsnedsatt;2026 prel.;Aug;498;5;
+Region Stockholm;0950 - Befogenhetsbedrägeri, bedrägeri genom social manipulation, internationell anknytning, mot äldre/funktionsnedsatt;2026 prel.;Aug;20;1;
