@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Kör hela kedjan: färdiga tabeller -> SOL-bevakningslista -> dashboards.
+"""Kör hela kedjan: färdiga tabeller -> SOL-bevakningslista -> dashboards och grafer.
 
     python scripts/fetch_all.py                 # allt (PDF:er hämtas bara första gången)
     python scripts/fetch_all.py --no-pdf        # hoppa över rapporter/metod-PDF
@@ -46,6 +46,12 @@ def main() -> None:
         else:
             ok &= step("Excel-dashboard", ["build_excel_dashboard.py"])
             ok &= step("HTML-dashboard", ["build_html_dashboard.py"])
+            try:
+                import matplotlib  # noqa: F401
+            except ImportError:
+                print("\n(matplotlib saknas – hoppar över exempelgrafer)")
+            else:
+                ok &= step("Exempelgrafer", ["make_charts.py"])
     print("\nKLART" if ok else "\nKLART MED FEL – se loggen ovan")
     sys.exit(0 if ok else 1)
 
