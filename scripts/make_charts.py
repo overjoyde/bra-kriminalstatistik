@@ -28,40 +28,27 @@ import pandas as pd  # noqa: E402
 import _bootstrap  # noqa: F401,E402
 from brastat.paths import data_dir  # noqa: E402
 
-BLUE, ORANGE, GREEN, RED, PURPLE, GREY = "#3b75af", "#ef8636", "#519e3e", "#c53a32", "#8d69b8", "#7f7f7f"
-PALETTE = [BLUE, ORANGE, GREEN, RED, PURPLE, "#84584e", "#d57dbf", GREY]
+from brastat import theme  # noqa: E402
+
 REGIONS = ["Stockholm", "Öst", "Väst", "Syd", "Mitt", "Bergslagen", "Nord"]
 SOURCE = "Källa: Brå, anmälda brott (SOL). Bearbetning: bra-kriminalstatistik."
 
-plt.rcParams.update({
-    "figure.dpi": 110, "savefig.dpi": 150, "font.size": 10,
-    "axes.spines.top": False, "axes.spines.right": False,
-    "axes.grid": True, "grid.alpha": 0.3, "axes.titlesize": 12, "legend.frameon": True,
-    "legend.fontsize": 9, "axes.formatter.use_locale": False,
-})
+plt.rcParams.update({"figure.dpi": 110, "savefig.dpi": 150, "font.size": 10})
 
-# Teman. Mörkt följer HTML-dashboardens mörka palett, så att samma serie har samma
-# färg i båda. Mörka filer får suffixet _dark; de ljusa behåller sina namn.
-THEMES = {
-    "light": {"colors": ("#3b75af", "#ef8636", "#519e3e", "#c53a32", "#8d69b8", "#7f7f7f"),
-              "extra": ("#84584e", "#d57dbf"), "bg": "white", "fg": "black", "suffix": "", "rc": {}},
-    "dark": {"colors": ("#6d9bf7", "#f5a255", "#6cc36a", "#ff8a80", "#b39ddb", "#9aa3b2"),
-             "extra": ("#c9a393", "#e57ad0"), "bg": "#171c25", "fg": "#e3e6eb", "suffix": "_dark",
-             "rc": {"figure.facecolor": "#171c25", "axes.facecolor": "#171c25", "savefig.facecolor": "#171c25",
-                    "axes.edgecolor": "#5c6677", "axes.labelcolor": "#e3e6eb", "text.color": "#e3e6eb",
-                    "xtick.color": "#9aa3b2", "ytick.color": "#9aa3b2", "grid.color": "#5c6677",
-                    "legend.facecolor": "#141922", "legend.edgecolor": "#394254", "legend.labelcolor": "#e3e6eb"}},
-}
-FG, BG, SUFFIX = "black", "white", ""
+# Mörka filer får suffixet _dark; de ljusa behåller sina namn. Paletterna finns i
+# brastat/theme.py och är desamma som i HTML-dashboarden.
+SUFFIXES = {"light": "", "dark": "_dark"}
 
 
 def use_theme(name: str) -> None:
     """Sätt färgkonstanterna för ett tema. Diagramfunktionerna läser dem vid anropet."""
     global BLUE, ORANGE, GREEN, RED, PURPLE, GREY, PALETTE, FG, BG, SUFFIX
-    t = THEMES[name]
-    BLUE, ORANGE, GREEN, RED, PURPLE, GREY = t["colors"]
-    PALETTE = [BLUE, ORANGE, GREEN, RED, PURPLE, *t["extra"], GREY]
-    FG, BG, SUFFIX = t["fg"], t["bg"], t["suffix"]
+    PALETTE = theme.PALETTES[name]
+    BLUE, ORANGE, GREEN, RED, PURPLE, _brown, _pink, GREY = PALETTE
+    FG, BG, SUFFIX = theme.COLORS[name]["fg"], theme.COLORS[name]["bg"], SUFFIXES[name]
+
+
+use_theme("light")
 
 
 def thousands(ax, axis="y"):
@@ -311,9 +298,9 @@ def main() -> None:
         annual = susp = None
         print(f"  (hoppar över årstabell/misstänkta – kör fetch_tables.py först: {e})")
 
-    for theme in (["light", "dark"] if a.theme == "both" else [a.theme]):
-        use_theme(theme)
-        with plt.rc_context(THEMES[theme]["rc"]):
+    for name in (["light", "dark"] if a.theme == "both" else [a.theme]):
+        use_theme(name)
+        with plt.rc_context(theme.rc(name)):
             chart_monthly(sol, out)
             chart_modus_r12(sol, out)
             chart_region_ytd(sol, out)
