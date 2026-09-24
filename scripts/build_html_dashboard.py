@@ -52,7 +52,8 @@ def build():
         "tm": TYPOLOGY_MAP, "regions": ["Hela landet"] + REGION_ORDER,
         "elder": sorted(pb.ELDER_PARENTS), "elderSuffix": pb.ELDER_SUFFIX,
     }
-    html = TEMPLATE.replace("/*__DATA__*/null", json.dumps(data, ensure_ascii=False, separators=(",", ":")))
+    html = (TEMPLATE.replace("/*__DARK__*/", DARK_THEME)
+            .replace("/*__DATA__*/null", json.dumps(data, ensure_ascii=False, separators=(",", ":"))))
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     with open(OUT, "w", encoding="utf-8") as f:
         f.write(html)
@@ -67,6 +68,19 @@ def _num(v):
     return None if f != f else f
 
 
+# Mörk palett. Samma nyanser som den ljusa men ljusare, så att serier, rött/grönt och
+# typologitaggar betyder samma sak i båda temana. Injiceras både för prefers-color-scheme
+# och för manuellt valt mörkt tema.
+DARK_THEME = (
+    "color-scheme:dark;"
+    "--navy:#16264a;--onnavy:#e6ebf5;--accent:#9db8ec;--ink:#e3e6eb;--muted:#9aa3b2;--line:#2a3140;"
+    "--bg:#0f131a;--card:#171c25;--surface:#141922;--field:#394254;--soft:#223152;--hover:#1d2430;"
+    "--flatbg:#232a36;--warnbg:#221c14;--tipbg:#0a0d12;--tipfg:#e3e6eb;--grid:#242b37;--axis:#5c6677;"
+    "--label:#e3e6eb;--barlbl:#c3c9d3;--heatup:229,83,70;--heatdown:52,168,100;"
+    "--up:#ff8a80;--upbg:rgba(255,138,128,.14);--down:#6fd39a;--downbg:rgba(111,211,154,.13);"
+    "--c1:#6d9bf7;--c2:#f5a255;--c3:#4fcdbd;--c4:#e57ad0;--c5:#bcc8dc;--c6:#c9a393;--c7:#8a94a3"
+)
+
 TEMPLATE = r"""<!doctype html>
 <html lang="sv">
 <head>
@@ -74,53 +88,64 @@ TEMPLATE = r"""<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Brå-trendbevakning – bedrägeri och penningtvätt</title>
 <style>
-  :root{--navy:#1F3864;--ink:#1d1d1f;--muted:#6b7280;--line:#e5e7eb;--bg:#f6f7f9;--card:#fff;
+  :root{color-scheme:light;
+        --navy:#1F3864;--onnavy:#fff;--accent:#1F3864;--ink:#1d1d1f;--muted:#6b7280;--line:#e5e7eb;--bg:#f6f7f9;--card:#fff;
+        --surface:#fff;--field:#cbd2d9;--soft:#eef2f8;--hover:#f8fafc;--flatbg:#f1f3f5;--warnbg:#fff8f0;
+        --tipbg:#111827;--tipfg:#fff;--grid:#eef0f3;--axis:#9ca3af;--label:#1d1d1f;--barlbl:#374151;
+        --heatup:192,57,43;--heatdown:30,123,69;
         --up:#c0392b;--upbg:#fdecea;--down:#1e7b45;--downbg:#e7f5ec;
         --c1:#1F3864;--c2:#e07a1f;--c3:#2a9d8f;--c4:#b5179e;--c5:#6c8ebf;--c6:#8d6e63;--c7:#9aa5b1}
+  @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){/*__DARK__*/}}
+  :root[data-theme="dark"]{/*__DARK__*/}
   *{box-sizing:border-box}
   body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:var(--ink);background:var(--bg);font-size:14px}
-  header{background:var(--navy);color:#fff;padding:20px 32px}
+  header{background:var(--navy);color:var(--onnavy);padding:20px 32px}
   header h1{margin:0;font-size:22px;font-weight:650}
   header p{margin:6px 0 0;opacity:.8;font-size:13px}
-  .controls{display:flex;gap:18px;align-items:center;flex-wrap:wrap;padding:14px 32px;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+  .controls{display:flex;gap:18px;align-items:center;flex-wrap:wrap;padding:14px 32px;background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
   .controls label{font-size:12px;color:var(--muted);display:flex;gap:8px;align-items:center}
-  select{font:inherit;padding:5px 8px;border:1px solid #cbd2d9;border-radius:6px;background:#fff}
-  .pill{background:#eef2f8;color:var(--navy);border-radius:999px;padding:4px 10px;font-size:12px;font-weight:600}
+  select{font:inherit;padding:5px 8px;border:1px solid var(--field);border-radius:6px;background:var(--surface);color:var(--ink)}
+  .pill{background:var(--soft);color:var(--accent);border-radius:999px;padding:4px 10px;font-size:12px;font-weight:600}
+  .theme{margin-left:auto;font:inherit;font-size:12px;border:1px solid var(--field);background:var(--surface);color:var(--ink);border-radius:6px;padding:4px 10px;cursor:pointer}
   main{padding:24px 32px;max-width:1500px;margin:0 auto}
   .grid{display:grid;gap:18px}
   .kpis{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
   .two{grid-template-columns:repeat(auto-fit,minmax(520px,1fr))}
   .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
-  .card h2{font-size:15px;margin:0 0 4px;color:var(--navy)}
+  .card h2{font-size:15px;margin:0 0 4px;color:var(--accent)}
   .card .sub{font-size:12px;color:var(--muted);margin:0 0 10px}
   .kpi .lbl{font-size:12px;color:var(--muted)}
-  .kpi .tm{font-size:11px;color:var(--navy);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+  .kpi .tm{font-size:11px;color:var(--accent);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
   .kpi .val{font-size:28px;font-weight:700;margin:4px 0}
   .kpi .cmp{font-size:12px;color:var(--muted)}
   .chg{font-weight:700;border-radius:5px;padding:1px 6px;font-size:12px;white-space:nowrap}
-  .chg.up{color:var(--up);background:var(--upbg)} .chg.down{color:var(--down);background:var(--downbg)} .chg.flat{color:var(--muted);background:#f1f3f5}
+  .chg.up{color:var(--up);background:var(--upbg)} .chg.down{color:var(--down);background:var(--downbg)} .chg.flat{color:var(--muted);background:var(--flatbg)}
   section{margin-top:22px}
   table{border-collapse:collapse;width:100%;font-size:13px}
-  th{background:var(--navy);color:#fff;font-weight:600;text-align:right;padding:8px;font-size:12px;position:sticky;top:0}
+  th{background:var(--navy);color:var(--onnavy);font-weight:600;text-align:right;padding:8px;font-size:12px;position:sticky;top:0}
   th:first-child,th:nth-child(2){text-align:left}
   td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
   td:first-child{text-align:left;font-weight:600} td:nth-child(2){text-align:left;color:var(--muted)}
-  tr:hover td{background:#f8fafc}
-  .tag{display:inline-block;font-size:11px;padding:2px 7px;border-radius:4px;background:#eef2f8;color:var(--navy);font-weight:600}
+  tr:hover td{background:var(--hover)}
+  .heat tr:hover td.hc{filter:brightness(1.08)}
+  .tag{display:inline-block;font-size:11px;padding:2px 7px;border-radius:4px;background:var(--soft);color:var(--accent);font-weight:600}
   .chart{width:100%;height:300px;position:relative}
   .chart svg{width:100%;height:100%;overflow:visible}
   .legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;margin-top:6px}
   .legend span{display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none}
   .legend span.off{opacity:.35}
   .legend i{width:12px;height:3px;border-radius:2px;display:inline-block}
-  .tip{position:absolute;pointer-events:none;background:#111827;color:#fff;font-size:12px;padding:7px 9px;border-radius:6px;opacity:0;transition:opacity .1s;white-space:nowrap;z-index:3}
+  .tip{position:absolute;pointer-events:none;background:var(--tipbg);color:var(--tipfg);border:1px solid var(--line);font-size:12px;padding:7px 9px;border-radius:6px;opacity:0;transition:opacity .1s;white-space:nowrap;z-index:3}
   .note{font-size:12px;color:var(--muted);line-height:1.5}
-  .warn{border-left:4px solid var(--c2);background:#fff8f0}
+  .warn{border-left:4px solid var(--c2);background:var(--warnbg)}
+  code{color:var(--ink)}
   .heat td.hc{font-weight:600}
   footer{padding:24px 32px 40px;color:var(--muted);font-size:12px;max-width:1500px;margin:0 auto}
   .tabs{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap}
-  .tabs button{font:inherit;font-size:12px;border:1px solid #cbd2d9;background:#fff;border-radius:6px;padding:4px 10px;cursor:pointer}
-  .tabs button.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .tabs button{font:inherit;font-size:12px;border:1px solid var(--field);background:var(--surface);color:var(--ink);border-radius:6px;padding:4px 10px;cursor:pointer}
+  .tabs button.on{background:var(--navy);color:var(--onnavy);border-color:var(--navy)}
+  .chart .gl{stroke:var(--grid)} .chart .ax{fill:var(--muted)} .chart .zl{stroke:var(--axis)}
+  .chart .bl{fill:var(--label)} .chart .bv{fill:var(--barlbl)}
   @media print{.controls{position:static}.card{break-inside:avoid}}
 </style>
 </head>
@@ -134,6 +159,7 @@ TEMPLATE = r"""<!doctype html>
   <label>Jämförelsemånad <select id="month"></select></label>
   <span class="pill" id="asof"></span>
   <span class="pill" id="final"></span>
+  <button class="theme" id="theme" type="button"></button>
 </div>
 <main>
   <div class="grid kpis" id="kpis"></div>
@@ -221,6 +247,17 @@ document.getElementById("final").textContent = `Senaste slutliga år: ${finalYea
 document.getElementById("gen").textContent = D.generated;
 regSel.onchange = monSel.onchange = renderAll;
 
+// ---------- theme: auto (följer systemet) → mörkt → ljust ----------
+const THEMES = {auto:"Tema: auto", dark:"Tema: mörkt", light:"Tema: ljust"};
+const themeBtn = document.getElementById("theme");
+function applyTheme(t){ if(t==="auto") delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme=t;
+  themeBtn.textContent = THEMES[t]; }
+let theme = "auto"; try { theme = localStorage.getItem("bra-theme") || "auto"; } catch(e) {}
+if(!THEMES[theme]) theme = "auto";
+applyTheme(theme);
+themeBtn.onclick = () => { const order=["auto","dark","light"]; theme=order[(order.indexOf(theme)+1)%3]; applyTheme(theme);
+  try { localStorage.setItem("bra-theme", theme); } catch(e) {} };
+
 // ---------- KPI cards + table ----------
 const SERIES = Object.keys(D.tm);
 function renderKpis(){
@@ -261,14 +298,14 @@ function lineChart(id, series, {isPct=false, legendId=null, xLabel=k=>k}={}){
   const X = k => P.l + (xs.length<2?0:xs.indexOf(k)/(xs.length-1))*(W-P.l-P.r);
   const Y = v => H-P.b - (v/ymax)*(H-P.t-P.b);
   let g = "";
-  for(let v=0;v<=ymax+ystep/1e6;v+=ystep){ const y=Y(v); g+=`<line x1="${P.l}" x2="${W-P.r}" y1="${y}" y2="${y}" stroke="#eef0f3"/><text x="${P.l-6}" y="${y+4}" font-size="11" fill="#6b7280" text-anchor="end">${axisFmt(v,isPct)}</text>`; }
+  for(let v=0;v<=ymax+ystep/1e6;v+=ystep){ const y=Y(v); g+=`<line x1="${P.l}" x2="${W-P.r}" y1="${y}" y2="${y}" class="gl"/><text class="ax" x="${P.l-6}" y="${y+4}" font-size="11" text-anchor="end">${axisFmt(v,isPct)}</text>`; }
   const step = Math.max(1, Math.ceil(xs.length/8));
-  xs.forEach((k,i)=>{ const last=i===xs.length-1; if((i%step===0 && xs.length-1-i >= step/2) || last) g+=`<text x="${X(k)}" y="${H-8}" font-size="11" fill="#6b7280" text-anchor="middle">${xLabel(k)}</text>`; });
+  xs.forEach((k,i)=>{ const last=i===xs.length-1; if((i%step===0 && xs.length-1-i >= step/2) || last) g+=`<text class="ax" x="${X(k)}" y="${H-8}" font-size="11" text-anchor="middle">${xLabel(k)}</text>`; });
   series.forEach((s,i)=>{ if(hidden.has(s.name)) return; const col=s.color||COLORS[i%COLORS.length];
     const d=s.data.map((p,j)=>`${j?"L":"M"}${X(p[0]).toFixed(1)},${Y(p[1]).toFixed(1)}`).join("");
-    g+=`<path d="${d}" fill="none" stroke="${col}" stroke-width="2.2" stroke-linejoin="round"/>`;
-    if(s.data.length<=15) s.data.forEach(p=>g+=`<circle cx="${X(p[0])}" cy="${Y(p[1])}" r="3" fill="${col}"/>`); });
-  g+=`<line id="${id}-cur" y1="${P.t}" y2="${H-P.b}" stroke="#9ca3af" stroke-dasharray="3 3" opacity="0"/>`;
+    g+=`<path d="${d}" fill="none" style="stroke:${col}" stroke-width="2.2" stroke-linejoin="round"/>`;
+    if(s.data.length<=15) s.data.forEach(p=>g+=`<circle cx="${X(p[0])}" cy="${Y(p[1])}" r="3" style="fill:${col}"/>`); });
+  g+=`<line id="${id}-cur" y1="${P.t}" y2="${H-P.b}" class="zl" stroke-dasharray="3 3" opacity="0"/>`;
   el.innerHTML = `<svg viewBox="0 0 ${W} ${H}">${g}<rect x="${P.l}" y="${P.t}" width="${W-P.l-P.r}" height="${H-P.t-P.b}" fill="transparent"/></svg>`;
   const svg=el.querySelector("svg"), cur=svg.querySelector(`#${id}-cur`), tip=tipEl();
   svg.onmousemove = e => { const r=svg.getBoundingClientRect(); const x=(e.clientX-r.left)*W/r.width;
@@ -289,19 +326,19 @@ function barChart(id, items, {horizontal=false, isPct=false, color="var(--c1)"}=
   if(!horizontal){
     const P={l:52,r:12,t:16,b:28}, {max:ymax, step:ystep}=niceAxis(Math.max(...items.map(d=>d[1]||0)));
     const bw=(W-P.l-P.r)/items.length;
-    for(let v=0;v<=ymax+ystep/1e6;v+=ystep){ const y=H-P.b-(v/ymax)*(H-P.t-P.b); g+=`<line x1="${P.l}" x2="${W-P.r}" y1="${y}" y2="${y}" stroke="#eef0f3"/><text x="${P.l-6}" y="${y+4}" font-size="11" fill="#6b7280" text-anchor="end">${axisFmt(v,isPct)}</text>`; }
+    for(let v=0;v<=ymax+ystep/1e6;v+=ystep){ const y=H-P.b-(v/ymax)*(H-P.t-P.b); g+=`<line x1="${P.l}" x2="${W-P.r}" y1="${y}" y2="${y}" class="gl"/><text class="ax" x="${P.l-6}" y="${y+4}" font-size="11" text-anchor="end">${axisFmt(v,isPct)}</text>`; }
     items.forEach((d,i)=>{ const h=(d[1]||0)/ymax*(H-P.t-P.b), x=P.l+i*bw+bw*0.15, y=H-P.b-h;
-      g+=`<rect class="b" data-i="${i}" x="${x}" y="${y}" width="${bw*0.7}" height="${h}" rx="3" fill="${color}"/>
-          <text x="${x+bw*0.35}" y="${H-8}" font-size="11" fill="#6b7280" text-anchor="middle">${d[0]}</text>`; });
+      g+=`<rect class="b" data-i="${i}" x="${x}" y="${y}" width="${bw*0.7}" height="${h}" rx="3" style="fill:${color}"/>
+          <text class="ax" x="${x+bw*0.35}" y="${H-8}" font-size="11" text-anchor="middle">${d[0]}</text>`; });
   } else {
     const P={l:96,r:60,t:6,b:6}, lim=Math.max(0.05,...items.map(d=>Math.abs(d[1]||0))), bh=(H-P.t-P.b)/items.length;
     const X0=P.l+(W-P.l-P.r)/2, sc=(W-P.l-P.r)/2/lim;
-    g+=`<line x1="${X0}" x2="${X0}" y1="${P.t}" y2="${H-P.b}" stroke="#9ca3af"/>`;
+    g+=`<line x1="${X0}" x2="${X0}" y1="${P.t}" y2="${H-P.b}" class="zl"/>`;
     items.forEach((d,i)=>{ const v=d[1]; const y=P.t+i*bh+bh*0.18, w=Math.abs(v||0)*sc, x=v>=0?X0:X0-w;
       const col = v>0.05?"var(--up)":v<-0.05?"var(--down)":"var(--c7)";
-      g+=`<text x="${P.l-8}" y="${y+bh*0.42}" font-size="12" fill="#1d1d1f" text-anchor="end">${d[0]}</text>
-          <rect class="b" data-i="${i}" x="${x}" y="${y}" width="${w}" height="${bh*0.64}" rx="3" fill="${col}"/>
-          <text x="${v>=0?X0+w+5:X0-w-5}" y="${y+bh*0.42}" font-size="11" fill="#374151" text-anchor="${v>=0?"start":"end"}">${pct(v)}</text>`; });
+      g+=`<text x="${P.l-8}" y="${y+bh*0.42}" font-size="12" class="bl" text-anchor="end">${d[0]}</text>
+          <rect class="b" data-i="${i}" x="${x}" y="${y}" width="${w}" height="${bh*0.64}" rx="3" style="fill:${col}"/>
+          <text x="${v>=0?X0+w+5:X0-w-5}" y="${y+bh*0.42}" font-size="11" class="bv" text-anchor="${v>=0?"start":"end"}">${pct(v)}</text>`; });
   }
   el.innerHTML=`<svg viewBox="0 0 ${W} ${H}">${g}</svg>`;
   el.querySelectorAll(".b").forEach(b=>{ b.onmousemove=e=>{ const d=items[+b.dataset.i]; tip.innerHTML=`<b>${d[0]}</b><br>${isPct||horizontal?pct(d[1]):fmt(d[1])}${d[2]?"<br>"+d[2]:""}`;
@@ -338,7 +375,7 @@ function renderRegions(){
   const HS = SERIES;
   let h = `<tr><th>Region</th>${HS.map(s=>`<th>${s.replace(", totalt","")}</th>`).join("")}</tr>`;
   D.regions.forEach(r=>{ h+=`<tr><td>${r}</td>`+HS.map(s=>{ const c=ytd(r,s,Y,M), p=ytd(r,s,Y-1,M), ch=ratio(c,p);
-      const a=ch==null?0:Math.min(1,Math.abs(ch)/0.5), bg=ch==null?"transparent":ch>0?`rgba(192,57,43,${0.08+0.5*a})`:`rgba(30,123,69,${0.08+0.5*a})`;
+      const a=ch==null?0:Math.min(1,Math.abs(ch)/0.5), bg=ch==null?"transparent":ch>0?`rgba(var(--heatup),${0.08+0.5*a})`:`rgba(var(--heatdown),${0.08+0.5*a})`;
       return `<td class="hc" style="background:${bg}" title="${pct(ch)} jämfört med ${Y-1} (${fmt(p)})">${fmt(c)}</td>`; }).join("")+`</tr>`; });
   const t=document.getElementById("heat"); t.innerHTML=h; t.querySelectorAll("th:nth-child(2)").forEach(th=>th.style.textAlign="right");
   t.querySelectorAll("td:nth-child(2)").forEach(td=>{td.style.color="inherit";td.style.textAlign="right";});
