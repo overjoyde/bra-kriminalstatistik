@@ -104,7 +104,8 @@ exclude = ["brastat/analysis/*", "brastat/cli/*", "scripts/*", "tests/*", "*.md"
 
 [tool.mypy]
 # Stegvis typkontroll: kärnbiblioteket (hämtning, tolkning, hälsa) kontrolleras i CI.
-python_version = "3.10"
+# 3.12: numpy 2.5:s stubbar använder type-satser (3.12+). Körning på 3.10 täcks av testmatrisen.
+python_version = "3.12"
 files = ["brastat"]
 warn_unused_ignores = true
 warn_redundant_casts = true
