@@ -1,0 +1,13 @@
+# Håller de SHA-pinnade GitHub Actions uppdaterade. Python-beroendena sköts av
+# .github/workflows/lock-refresh.yml (uv pip compile), eftersom Dependabot inte förstår låsfilen.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: "CI"

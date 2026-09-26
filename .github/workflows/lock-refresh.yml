@@ -1,0 +1,32 @@
+name: lock-refresh
+# Genererar om requirements.lock med de senaste versionerna inom intervallen i requirements.txt
+# och öppnar en PR. CI i PR:en visar om uppgraderingen håller.
+# Kräver repoinställningen: Settings → Actions → General → "Allow GitHub Actions to create and approve pull requests".
+on:
+  schedule:
+    - cron: "23 5 1 * *"  # den 1:a varje månad 05:23 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7  # v10.2.0
+      - name: Uppdatera låsfilen
+        run: uv pip compile requirements.txt --universal --python-version 3.10 --upgrade -o requirements.lock
+      - uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1  # v8.1.1
+        with:
+          branch: chore/lock-refresh
+          commit-message: "Beroenden: uppdatera requirements.lock"
+          title: "Beroenden: uppdatera requirements.lock"
+          body: |
+            Automatisk månadsuppdatering av låsta versioner (`uv pip compile --upgrade`).
+            Slå ihop när CI är grön. Versionsintervallen i `requirements.txt` är oförändrade.
+          delete-branch: true

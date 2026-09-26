@@ -2,19 +2,112 @@ name: ci
 on:
   push:
   pull_request:
+
+# Minsta möjliga rättigheter. Actions är pinnade till commit-SHA (Dependabot håller dem uppdaterade).
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  test:
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
+  lint:
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
         with:
           python-version: "3.12"
-      - run: python -m pip install -r requirements.txt
+      - run: python -m pip install -r requirements.lock "ruff==0.16.8" "mypy==1.19.1"
+      - run: python -m pip install --no-deps -e .
+      - name: Ruff (lint)
+        run: ruff check --output-format=github .
+      - name: Ruff (format, kärnbiblioteket)
+        run: ruff format --check .
+      - name: Mypy (kärnbiblioteket)
+        run: mypy
+
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python: ["3.12"]
+        include:
+          # Äldsta och nyaste Python som stöds (requires-python >= 3.10)
+          - { os: ubuntu-latest, python: "3.10" }
+          - { os: ubuntu-latest, python: "3.14" }
+    runs-on: ${{ matrix.os }}
+    env:
+      PYTHONIOENCODING: utf-8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: ${{ matrix.python }}
+      # Samma låsta versioner som setup-skripten installerar, plus paketet i redigerbart läge.
+      - run: python -m pip install -r requirements.lock
+      - run: python -m pip install --no-deps -e .
       - name: Offline-tester
         run: python -m unittest discover -s tests -v
-      - name: Kompilera alla skript
+      - name: Kompilera alla moduler
         run: python -m compileall -q brastat scripts
+      - name: Kommandona startar (scripts/ och brastat-…)
+        run: |
+          python scripts/sol_query.py --help
+          python scripts/domstat_query.py --help
+          python scripts/check_health.py --help
+          brastat-health --help
+          brastat-fetch-all --help
+      - name: Hjulet innehåller paketdata
+        shell: bash
+        run: |
+          python -m pip wheel --no-deps -w dist .
+          python -m zipfile -l dist/brastat-*.whl | grep -E "digicert_ev_rsa_ca_g2.pem|config/watchlist_aml_fraud.json|templates/dashboard.html"
+
+  wrappers-windows:
+    # Körskripten i run/windows (.ps1 och .bat), inklusive setup från låsfilen.
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: setup.ps1 (skapar .venv, installerar låsfilen, kör testerna)
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File run\windows\setup.ps1
+      - name: Alla .ps1-skript svarar på --help
+        shell: powershell
+        run: |
+          $skip = @("setup", "schedule_task", "_common")
+          Get-ChildItem run\windows\*.ps1 | Where-Object { $skip -notcontains $_.BaseName } | ForEach-Object {
+            Write-Host "== $($_.Name)"
+            powershell -NoProfile -ExecutionPolicy Bypass -File $_.FullName --help | Out-Null
+            if ($LASTEXITCODE -ne 0) { throw "$($_.Name) misslyckades ($LASTEXITCODE)" }
+          }
+      - name: .bat-skal
+        shell: cmd
+        run: |
+          call run\windows\check_health.bat --help || exit /b 1
+          call run\windows\sol_query.bat --help || exit /b 1
+
+  wrappers-unix:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: setup.sh (skapar .venv, installerar låsfilen, kör testerna)
+        run: ./run/mac-linux/setup.sh
+      - name: Alla .sh-skript svarar på --help
+        run: |
+          for f in run/mac-linux/*.sh; do
+            case "$(basename "$f" .sh)" in setup|schedule_macos|schedule_cron|_common) continue;; esac
+            echo "== $f"; "$f" --help > /dev/null
+          done

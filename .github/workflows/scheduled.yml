@@ -1,0 +1,42 @@
+name: scheduled
+# Veckovis kontroll som inte beror på att någon kör lokalt:
+#  - livetest mot Brå (SOL, bra.se) och Domstolsverket (DOMstat): upptäcker ändrade URL:er/format
+#  - testerna med de senaste beroendeversionerna (utan låsfil): upptäcker brytande pandas/numpy m.fl.
+on:
+  schedule:
+    - cron: "17 5 * * 1"  # måndagar 05:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke-live:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -e .
+      - name: Livetest (SOL, DOMstat, bra.se)
+        run: python -m brastat.cli.smoke_live
+
+  latest-deps:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      PYTHONIOENCODING: utf-8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: "3.14"
+      - name: Senaste tillåtna versioner (utan låsfil)
+        run: python -m pip install --upgrade -e ".[analysis,export]"
+      - run: python -m pip list
+      - name: Offline-tester
+        run: python -m unittest discover -s tests -v
