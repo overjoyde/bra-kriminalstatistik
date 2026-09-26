@@ -1,14 +1,12 @@
 """Offline-tester för DOMstat-klienten (kör: python -m unittest discover -s tests)."""
 import json
-import sys
 import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT))
 
-from brastat.domstat import (DomstatClient, build_query, norm_table, parse_metadata,  # noqa: E402
-                             parse_result, select_years)
+from brastat.domstat import DomstatClient, build_query, norm_table, parse_metadata, parse_result, select_years
+from brastat.paths import config_path
 
 FIX = ROOT / "tests" / "fixtures"
 TABLE = "AntalMal/02b_Malutveckling_per_malkategori_arenden_TR"
@@ -64,6 +62,27 @@ class TestMetadata(unittest.TestCase):
         self.assertEqual(yr.text_of(select_years(yr, "2025-")[0]), "2025")
         with self.assertRaises(ValueError):
             select_years(yr, "1850")
+
+    def test_years_edge_cases(self):
+        yr = self.t.time_var
+        txt = lambda spec: [yr.text_of(c) for c in select_years(yr, spec)]  # noqa: E731
+        # Öppna intervall, med och utan mellanslag
+        self.assertEqual(txt("2015-"), [str(y) for y in range(2015, 2026)])
+        self.assertEqual(txt(" 2024 - "), ["2024", "2025"])
+        self.assertEqual(txt("-2003"), ["2002", "2003"])
+        # senaste:N, även större än antalet år
+        self.assertEqual(txt("senaste:3"), ["2023", "2024", "2025"])
+        self.assertEqual(txt("SENASTE"), ["2025"])
+        self.assertEqual(len(select_years(yr, "senaste:999")), len(yr.values))
+        # Heltal och listor (även av heltal)
+        self.assertEqual(txt(2025), ["2025"])
+        self.assertEqual(txt([2024, "2025"]), ["2024", "2025"])
+        self.assertEqual(select_years(yr, None), list(yr.values))
+        self.assertEqual(select_years(yr, "*"), list(yr.values))
+        # Urval utan träff ger fel i stället för en tom fråga
+        for bad in ("senaste:0", "1990-1995", "2030-", [1850], "abc"):
+            with self.subTest(bad=bad), self.assertRaises(ValueError):
+                select_years(yr, bad)
 
     def test_build_query_defaults_to_all_values(self):
         q = build_query(self.t, {"Domstol": "Alla tingsrätter"}, years="senaste")
@@ -125,7 +144,7 @@ class TestClientOffline(unittest.TestCase):
 
 class TestWatchlistConfig(unittest.TestCase):
     def test_config_is_valid(self):
-        cfg = json.loads((ROOT / "config" / "watchlist_domstat.json").read_text(encoding="utf-8"))
+        cfg = json.loads(config_path("watchlist_domstat.json").read_text(encoding="utf-8"))
         names = [s["namn"] for s in cfg["serier"]]
         self.assertEqual(len(names), len(set(names)))
         for s in cfg["serier"]:

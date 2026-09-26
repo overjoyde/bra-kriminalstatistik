@@ -11,6 +11,8 @@ $pre = @(); if ($base.Length -gt 1) { $pre = $base[1..($base.Length - 1)] }
 & $base[0] @pre -m venv .venv
 $Py = Join-Path $Repo ".venv\Scripts\python.exe"
 & $Py -m pip install --upgrade pip | Out-Null
-& $Py -m pip install -r requirements.txt
+# Låsta versioner (reproducerbart) + paketet brastat i redigerbart läge.
+& $Py -m pip install -r requirements.lock
+& $Py -m pip install --no-deps -e .
 & $Py -m unittest discover -s tests
 Write-Host "Klart. Testa: run\windows\sol_watchlist.bat"

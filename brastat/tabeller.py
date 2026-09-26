@@ -10,26 +10,37 @@ webapp-assets.js) och laddar ned filerna.
 Resultatet loggas i ``manifest.csv`` (URL, status, storlek, sha256). Om Brå byter
 webbplattform syns det som ``saknas`` i manifestet.
 """
+
 from __future__ import annotations
 
 import csv
 import datetime as dt
 import hashlib
 import json
+import logging
 import re
 import urllib.parse
 from pathlib import Path
 
 from .http import Client
 
+log = logging.getLogger(__name__)
+
 BASE = "https://bra.se"
 REGIONS = ["La", "Rn01", "Rn02", "Rn03", "Rn04", "Rn05", "Rn06", "Rn07"]  # La = hela landet
 POLIS_REGIONS = REGIONS[1:]
-REGION_NAMES = {"La": "Hela landet", "Rn01": "Nord", "Rn02": "Mitt", "Rn03": "Öst", "Rn04": "Väst",
-                "Rn05": "Syd", "Rn06": "Stockholm", "Rn07": "Bergslagen"}
+REGION_NAMES = {
+    "La": "Hela landet",
+    "Rn01": "Nord",
+    "Rn02": "Mitt",
+    "Rn03": "Öst",
+    "Rn04": "Väst",
+    "Rn05": "Syd",
+    "Rn06": "Stockholm",
+    "Rn07": "Bergslagen",
+}
 
-GROUPS = ["anmalda", "misstankta", "lagforda", "handlagda", "malsagare", "enkater", "amnessidor",
-          "rapporter", "metod"]
+GROUPS = ["anmalda", "misstankta", "lagforda", "handlagda", "malsagare", "enkater", "amnessidor", "rapporter", "metod"]
 
 REPORT_PAGES = [
     "rapporter/arkiv/2025-12-11-foretag-som-brottsverktyg",
@@ -58,8 +69,14 @@ def default_last_full_year(today: dt.date | None = None) -> int:
 
 
 class TableFetcher:
-    def __init__(self, out: Path, force: bool = False, last_full_year: int | None = None,
-                 years: int = 10, client: Client | None = None):
+    def __init__(
+        self,
+        out: Path,
+        force: bool = False,
+        last_full_year: int | None = None,
+        years: int = 10,
+        client: Client | None = None,
+    ):
         self.out = Path(out)
         self.raw = self.out / "raw"
         self.docs = self.out / "docs"
@@ -98,12 +115,19 @@ class TableFetcher:
                 status = "uppdaterad" if changed else "ok"
             except Exception as e:  # noqa: BLE001 – logga och fortsätt
                 self._log(group=group, url=url, status=f"FEL: {e}", bytes=0, note=note)
-                print(f"  x {url}  ({e})")
+                log.warning("  x %s  (%s)", url, e)
                 return
         data = dest.read_bytes()
-        self._log(group=group, file=self._rel(dest), url=url, status=status, bytes=len(data),
-                  sha256=hashlib.sha256(data).hexdigest(), note=note)
-        print(f"  {'.' if status == 'cached' else '+'} {self._rel(dest)}")
+        self._log(
+            group=group,
+            file=self._rel(dest),
+            url=url,
+            status=status,
+            bytes=len(data),
+            sha256=hashlib.sha256(data).hexdigest(),
+            note=note,
+        )
+        log.info("  %s %s", "." if status == "cached" else "+", self._rel(dest))
 
     def resolve_statpage(self, divurl: str) -> str | None:
         try:
@@ -117,13 +141,14 @@ class TableFetcher:
         url = self.resolve_statpage(divurl)
         if not url:
             self._log(group=group, url=f"{BASE}/statistik_sidor/{divurl}.html", status="saknas", bytes=0, note=note)
-            print(f"  - saknas: {divurl}")
+            log.warning("  - saknas: %s", divurl)
             return
         fname = urllib.parse.unquote(url.rsplit("/", 1)[1])
         self.save(url, self.raw / folder / fname, group, note)
 
-    def page_files(self, page: str, dest: Path, group: str, pattern: str = r"\.(?:xlsx|xls|csv)$",
-                   exclude: str | None = None) -> None:
+    def page_files(
+        self, page: str, dest: Path, group: str, pattern: str = r"\.(?:xlsx|xls|csv)$", exclude: str | None = None
+    ) -> None:
         html = self.http.text(f"{BASE}/{page}")
         for link in sorted(set(re.findall(r'(?:https://bra\.se)?(/download/[^"\'\s]+)', html))):
             name = urllib.parse.unquote(link.rsplit("/", 1)[1])
@@ -147,18 +172,32 @@ class TableFetcher:
             for q in cd.get("questions", []):
                 for s in q.get("series", []):
                     for label, val in zip(q.get("labels", []), s.get("data", [])):
-                        rows.append(dict(chart=cd.get("chartTitle"), question=q.get("customName") or q.get("name"),
-                                         series=s.get("title"), label=label, value=val,
-                                         description=cd.get("chartDescription")))
+                        rows.append(
+                            dict(
+                                chart=cd.get("chartTitle"),
+                                question=q.get("customName") or q.get("name"),
+                                series=s.get("title"),
+                                label=label,
+                                value=val,
+                                description=cd.get("chartDescription"),
+                            )
+                        )
         out.parent.mkdir(parents=True, exist_ok=True)
         with out.open("w", newline="", encoding="utf-8") as f:
             w = csv.DictWriter(f, fieldnames=["chart", "question", "series", "label", "value", "description"])
             w.writeheader()
             w.writerows(rows)
         data = out.read_bytes()
-        self._log(group=group, file=self._rel(out), url=f"{BASE}/{page}", status="extraherad", bytes=len(data),
-                  sha256=hashlib.sha256(data).hexdigest(), note=f"{len(rows)} rader diagramdata")
-        print(f"  + {self._rel(out)} ({len(rows)} rader)")
+        self._log(
+            group=group,
+            file=self._rel(out),
+            url=f"{BASE}/{page}",
+            status="extraherad",
+            bytes=len(data),
+            sha256=hashlib.sha256(data).hexdigest(),
+            note=f"{len(rows)} rader diagramdata",
+        )
+        log.info("  + %s (%d rader)", self._rel(out), len(rows))
 
     def latest_options(self, page: str, form_prefix: str) -> list[str]:
         html = self.http.text(f"{BASE}/{page}")
@@ -167,50 +206,64 @@ class TableFetcher:
 
     # ---- groups --------------------------------------------------------
     def anmalda(self) -> None:
-        print("\n[anmalda] Anmälda brott – preliminär månads-/kvartalsstatistik")
+        log.info("[anmalda] Anmälda brott – preliminär månads-/kvartalsstatistik")
         p1 = self.latest_options(ANM, "P1")
         if p1:
             latest_month = p1[0]  # t.ex. "Aug-2026"
             year = latest_month.split("-")[1]
             for r in REGIONS:
-                self.stat_table(f"P1/{year}/P1{r}{latest_month}", "anmalda_brott/prel_P1M_manad", "anmalda",
-                                f"P1M {latest_month} {r}")
-                self.stat_table(f"P3/{year}/P3{r}{latest_month}", "anmalda_brott/prel_P3_utveckling", "anmalda",
-                                f"P3 {latest_month} {r}")
+                self.stat_table(
+                    f"P1/{year}/P1{r}{latest_month}",
+                    "anmalda_brott/prel_P1M_manad",
+                    "anmalda",
+                    f"P1M {latest_month} {r}",
+                )
+                self.stat_table(
+                    f"P3/{year}/P3{r}{latest_month}",
+                    "anmalda_brott/prel_P3_utveckling",
+                    "anmalda",
+                    f"P3 {latest_month} {r}",
+                )
         p2 = self.latest_options(ANM, "P2")
         if p2:
             q, qy = p2[0], p2[0].split("-")[1]
             for reg in ("P1", "P2"):  # P1 = hela landet, P2 = alla områden
                 self.stat_table(f"{reg}/{qy}/{reg}{q}", "anmalda_brott/prel_kvartal", "anmalda", f"kvartal {q} {reg}")
 
-        print("\n[anmalda] Tidsserier per månad (landet 2015–, regioner 2022–)")
+        log.info("[anmalda] Tidsserier per månad (landet 2015–, regioner 2022–)")
         for opt in self.latest_options(ANM, "P4"):
-            y = opt.split("/")[1]
+            year_s = opt.split("/")[1]
             if opt.startswith("P4", 8):  # regionversion (>= 2022)
                 for r in REGIONS:
-                    self.stat_table(opt.replace("Region", r), "anmalda_brott/tidsserie_manad", "anmalda", f"{y} {r}")
+                    self.stat_table(
+                        opt.replace("Region", r), "anmalda_brott/tidsserie_manad", "anmalda", f"{year_s} {r}"
+                    )
             else:
-                self.stat_table(opt, "anmalda_brott/tidsserie_manad", "anmalda", f"{y} La")
+                self.stat_table(opt, "anmalda_brott/tidsserie_manad", "anmalda", f"{year_s} La")
 
-        print("\n[anmalda] Slutlig årsstatistik")
+        log.info("[anmalda] Slutlig årsstatistik")
         for y in self.years:
             self.stat_table(f"100/{y}/100La-{y}", "anmalda_brott/ar_100_landet", "anmalda", f"tabell 100 {y}")
             self.stat_table(f"110/{y}/110La-{y}", "anmalda_brott/ar_110_regioner", "anmalda", f"tabell 110 {y}")
         for y in self.years[-3:]:
             for r in POLIS_REGIONS:
-                self.stat_table(f"120/{y}/120{r}-{y}", "anmalda_brott/ar_120_kommuner", "anmalda", f"tabell 120 {y} {r}")
+                self.stat_table(
+                    f"120/{y}/120{r}-{y}", "anmalda_brott/ar_120_kommuner", "anmalda", f"tabell 120 {y} {r}"
+                )
         self.page_files(ANM, self.raw / "anmalda_brott/tidsserier_och_kommun", "anmalda")
 
     def misstankta(self) -> None:
-        print("\n[misstankta] Misstänkta personer (brottstyp x ålder x kön, lagföringsbeslut)")
+        log.info("[misstankta] Misstänkta personer (brottstyp x ålder x kön, lagföringsbeslut)")
         for y in self.years:
             self.stat_table(f"220/{y}/220La-{y}", "misstankta/220_brottstyp_alder_kon", "misstankta", f"220 {y}")
-            self.stat_table(f"230/{y}/230aLa-{y}", "misstankta/230a_lagforingsbeslut_brottstyp", "misstankta", f"230a {y}")
+            self.stat_table(
+                f"230/{y}/230aLa-{y}", "misstankta/230a_lagforingsbeslut_brottstyp", "misstankta", f"230a {y}"
+            )
             self.stat_table(f"230/{y}/230bLa-{y}", "misstankta/230b_lagforingsbeslut_alder", "misstankta", f"230b {y}")
         self.page_files(MISST, self.raw / "misstankta/tidsserier", "misstankta")
 
     def lagforda(self) -> None:
-        print("\n[lagforda] Personer lagförda för brott")
+        log.info("[lagforda] Personer lagförda för brott")
         for y in self.years:
             self.stat_table(f"420/{y}/420La-{y}", "lagforda/420_lagforingsbeslut_brott", "lagforda", f"420 {y}")
             self.stat_table(f"450/{y}/450La-{y}", "lagforda/450_huvudbrott_alder", "lagforda", f"450 {y}")
@@ -218,7 +271,7 @@ class TableFetcher:
         self.page_files(LAGF, self.raw / "lagforda/tidsserier", "lagforda")
 
     def handlagda(self) -> None:
-        print("\n[handlagda] Handlagda brott och uppklaring")
+        log.info("[handlagda] Handlagda brott och uppklaring")
         for y in self.years:
             for t in ("300", "310", "320"):
                 self.stat_table(f"{t}/{y}/{t}La-{y}", f"handlagda/{t}", "handlagda", f"{t} {y}")
@@ -226,39 +279,59 @@ class TableFetcher:
         for t in ("301", "311"):  # halvår innevarande år
             self.stat_table(f"{t}/{cur}/{t}La-{cur}", f"handlagda/{t}_halvar", "handlagda", f"{t} {cur} halvår")
         self.page_files(HANDL, self.raw / "handlagda/tidsserier", "handlagda")
-        self.page_files("statistik/statistik-fran-rattsvasendet/handlaggningsresultat",
-                        self.raw / "handlaggningsresultat", "handlagda")
+        self.page_files(
+            "statistik/statistik-fran-rattsvasendet/handlaggningsresultat",
+            self.raw / "handlaggningsresultat",
+            "handlagda",
+        )
 
     def malsagare(self) -> None:
-        print("\n[malsagare] Målsägare vid brottsanmälan")
+        log.info("[malsagare] Målsägare vid brottsanmälan")
         for y in self.years:
-            self.stat_table(f"malsagare/{y}/malsagare_vid_brottsanmalan_{y}", "malsagare/tabellverk", "malsagare", str(y))
-        self.page_files("statistik/statistik-fran-rattsvasendet/malsagare-vid-brottsanmalan",
-                        self.raw / "malsagare", "malsagare")
+            self.stat_table(
+                f"malsagare/{y}/malsagare_vid_brottsanmalan_{y}", "malsagare/tabellverk", "malsagare", str(y)
+            )
+        self.page_files(
+            "statistik/statistik-fran-rattsvasendet/malsagare-vid-brottsanmalan", self.raw / "malsagare", "malsagare"
+        )
 
     def enkater(self) -> None:
-        print("\n[enkater] NTU och Skolundersökningen om brott")
-        self.page_files("statistik/statistik-fran-enkatundersokningar/nationella-trygghetsundersokningen",
-                        self.raw / "ntu", "enkater")
-        self.page_files("statistik/statistik-fran-enkatundersokningar/skolundersokningen-om-brott",
-                        self.raw / "skolundersokningen", "enkater")
+        log.info("[enkater] NTU och Skolundersökningen om brott")
+        self.page_files(
+            "statistik/statistik-fran-enkatundersokningar/nationella-trygghetsundersokningen",
+            self.raw / "ntu",
+            "enkater",
+        )
+        self.page_files(
+            "statistik/statistik-fran-enkatundersokningar/skolundersokningen-om-brott",
+            self.raw / "skolundersokningen",
+            "enkater",
+        )
 
     def amnessidor(self) -> None:
-        print("\n[amnessidor] Diagramdata från ämnessidor")
+        log.info("[amnessidor] Diagramdata från ämnessidor")
         self.chart_data("amnen/bedrageri", self.raw / "amnessidor/bedrageri_diagramdata.csv", "amnessidor")
-        self.chart_data("amnen/penningtvatt-och-finansiering-av-terrorism",
-                        self.raw / "amnessidor/penningtvatt_terrorfinansiering_diagramdata.csv", "amnessidor")
+        self.chart_data(
+            "amnen/penningtvatt-och-finansiering-av-terrorism",
+            self.raw / "amnessidor/penningtvatt_terrorfinansiering_diagramdata.csv",
+            "amnessidor",
+        )
 
     def rapporter(self) -> None:
-        print("\n[rapporter] Rapporter (PDF)")
+        log.info("[rapporter] Rapporter (PDF)")
         for page in REPORT_PAGES:
-            self.page_files(page, self.docs / "rapporter", "rapporter", pattern=r"\.pdf$",
-                            exclude=r"(Money_Laundering|Financing_of_terrorism|Swedish Crime Survey|Begrepp)")
+            self.page_files(
+                page,
+                self.docs / "rapporter",
+                "rapporter",
+                pattern=r"\.pdf$",
+                exclude=r"(Money_Laundering|Financing_of_terrorism|Swedish Crime Survey|Begrepp)",
+            )
         for link in EXTRA_REPORTS:
             self.save(BASE + link, self.docs / "rapporter" / link.rsplit("/", 1)[1], "rapporter")
 
     def metod(self) -> None:
-        print("\n[metod] Begrepp, kvalitetsdeklarationer, statistikrapporter")
+        log.info("[metod] Begrepp, kvalitetsdeklarationer, statistikrapporter")
         for page in (ANM, MISST, LAGF, HANDL):
             self.page_files(page, self.docs / "metod", "metod", pattern=r"\.pdf$")
 
@@ -269,7 +342,7 @@ class TableFetcher:
                 getattr(self, g)()
             except Exception as e:  # noqa: BLE001 – en grupp får inte stoppa resten
                 self._log(group=g, status=f"FEL: {e}")
-                print(f"  x grupp {g} misslyckades: {e}")
+                log.error("  x grupp %s misslyckades: %s", g, e)
         return self.write_manifest()
 
     def write_manifest(self) -> Path:
@@ -285,5 +358,5 @@ class TableFetcher:
             w.writeheader()
             w.writerows(old + self.manifest)
         ok = sum(1 for m in self.manifest if m["status"] in ("ok", "uppdaterad", "cached", "extraherad"))
-        print(f"\nKlart {dt.datetime.now():%Y-%m-%d %H:%M}: {ok}/{len(self.manifest)} poster OK -> {path}")
+        log.info("Klart %s: %d/%d poster OK -> %s", f"{dt.datetime.now():%Y-%m-%d %H:%M}", ok, len(self.manifest), path)
         return path

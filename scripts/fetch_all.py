@@ -1,64 +1,6 @@
 #!/usr/bin/env python3
-"""Kör hela kedjan: färdiga tabeller -> SOL-bevakningslista -> DOMstat-bevakningslista -> dashboards och grafer.
-
-    python scripts/fetch_all.py                 # allt (PDF:er hämtas bara första gången)
-    python scripts/fetch_all.py --no-pdf        # hoppa över rapporter/metod-PDF
-    python scripts/fetch_all.py --skip-dashboards
-    python scripts/fetch_all.py --only-sol      # bara SOL-bevakningslistan
-    python scripts/fetch_all.py --no-domstat    # hoppa över Domstolsverkets DOMstat
-
-Används av run/mac-linux/*.sh och run/windows/*.ps1 samt schemalagda körningar.
-"""
-import argparse
-import subprocess
-import sys
-from pathlib import Path
-
-HERE = Path(__file__).resolve().parent
-
-
-def step(name: str, args: list[str]) -> bool:
-    print(f"\n=== {name} ===", flush=True)
-    r = subprocess.run([sys.executable, str(HERE / args[0]), *args[1:]])
-    if r.returncode != 0:
-        print(f"!!! {name} avslutades med kod {r.returncode}", flush=True)
-    return r.returncode == 0
-
-
-def main() -> None:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--no-pdf", action="store_true")
-    ap.add_argument("--skip-dashboards", action="store_true")
-    ap.add_argument("--only-sol", action="store_true")
-    ap.add_argument("--force", action="store_true", help="Hämta om färdiga tabeller")
-    ap.add_argument("--no-domstat", action="store_true", help="Hoppa över Domstolsverkets DOMstat")
-    a = ap.parse_args()
-
-    ok = True
-    if not a.only_sol:
-        args = ["fetch_tables.py"] + (["--no-pdf"] if a.no_pdf else []) + (["--force"] if a.force else [])
-        ok &= step("Färdiga tabeller från bra.se", args)
-    ok &= step("SOL-bevakningslista", ["sol_watchlist.py"])
-    if not (a.no_domstat or a.only_sol):
-        ok &= step("DOMstat-bevakningslista (Domstolsverket)", ["domstat_watchlist.py"])
-    if not (a.skip_dashboards or a.only_sol):
-        try:
-            import openpyxl  # noqa: F401
-            import pandas  # noqa: F401
-        except ImportError:
-            print("\n(pandas/openpyxl saknas – hoppar över dashboards. Kör setup-skriptet först.)")
-        else:
-            ok &= step("Excel-dashboard", ["build_excel_dashboard.py"])
-            ok &= step("HTML-dashboard", ["build_html_dashboard.py"])
-            try:
-                import matplotlib  # noqa: F401
-            except ImportError:
-                print("\n(matplotlib saknas – hoppar över exempelgrafer)")
-            else:
-                ok &= step("Exempelgrafer", ["make_charts.py"])
-    print("\nKLART" if ok else "\nKLART MED FEL – se loggen ovan")
-    sys.exit(0 if ok else 1)
-
+"""Tunt skal för bakåtkompatibilitet – koden finns i brastat.cli.fetch_all (samma som kommandot `brastat-fetch-all`). Kör med --help."""
+from brastat.cli.fetch_all import main
 
 if __name__ == "__main__":
     main()

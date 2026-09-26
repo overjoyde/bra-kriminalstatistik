@@ -1,14 +1,12 @@
 """Offline-tester för SOL-tolkningen (kör: python -m unittest discover -s tests)."""
 import datetime as dt
-import sys
 import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT))
 
-from brastat.sol import SolClient, parse_catalog, parse_dbfil  # noqa: E402
-from brastat.tabeller import default_last_full_year  # noqa: E402
+from brastat.sol import SolClient, parse_catalog, parse_dbfil
+from brastat.tabeller import default_last_full_year
 
 FIX = ROOT / "tests" / "fixtures"
 

@@ -13,3 +13,11 @@ Thumbs.db
 .idea/
 .vscode/
 run/windows/_scheduled.cmd
+# Lokal agent-/verktygskonfiguration (inte del av projektet)
+.claude/
+.pandaos/
+# Paketbygge (pip install -e . / python -m build)
+*.egg-info/
+build/
+dist/
+.ruff_cache/

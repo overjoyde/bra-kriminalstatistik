@@ -1,0 +1,117 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "brastat"
+dynamic = ["version"]
+description = "Hämta och analysera Sveriges officiella kriminalstatistik från Brå (SOL, bra.se) och Domstolsverket (DOMstat)."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.10"
+authors = [{ name = "overjoyde" }]
+keywords = ["brå", "kriminalstatistik", "domstolsverket", "pxweb", "aml", "bedrägeri"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.14",
+    "Operating System :: OS Independent",
+    "Natural Language :: Swedish",
+]
+# Själva hämtningen (brastat/) använder bara standardbiblioteket. truststore gör att
+# operativsystemets certifikatlager används (rekommenderas på macOS/Windows).
+# Håll listorna i synk med requirements.txt (kontrolleras av tests/test_packaging.py).
+dependencies = [
+    "truststore>=0.9,<1",
+]
+
+[project.optional-dependencies]
+# Tolkning av Excel-tabeller, dashboards och exempelgrafer (brastat.analysis)
+analysis = [
+    "pandas>=2.0,<4",
+    "numpy>=1.24,<3",
+    "openpyxl>=3.1,<4",
+    "xlrd>=2.0,<3",
+    "matplotlib>=3.7,<4",
+]
+# Export till Parquet/DuckDB (scripts/export_data.py). Ingår inte i låsfilen.
+export = [
+    "pyarrow>=15",
+    "duckdb>=1.0",
+]
+dev = [
+    "ruff==0.16.8",
+    "mypy>=1.10",
+    "pre-commit>=3.7",
+]
+
+[project.scripts]
+brastat-fetch-all = "brastat.cli.fetch_all:main"
+brastat-fetch-tables = "brastat.cli.fetch_tables:main"
+brastat-sol-watchlist = "brastat.cli.sol_watchlist:main"
+brastat-sol-query = "brastat.cli.sol_query:main"
+brastat-sol-catalog = "brastat.cli.sol_catalog:main"
+brastat-domstat-watchlist = "brastat.cli.domstat_watchlist:main"
+brastat-domstat-query = "brastat.cli.domstat_query:main"
+brastat-domstat-catalog = "brastat.cli.domstat_catalog:main"
+brastat-health = "brastat.cli.check_health:main"
+brastat-export = "brastat.cli.export_data:main"
+brastat-smoke = "brastat.cli.smoke_live:main"
+brastat-charts = "brastat.analysis.charts:main"
+brastat-excel-dashboard = "brastat.analysis.excel_dashboard:main"
+brastat-html-dashboard = "brastat.analysis.html_dashboard:main"
+
+[project.urls]
+Homepage = "https://github.com/overjoyde/bra-kriminalstatistik"
+Changelog = "https://github.com/overjoyde/bra-kriminalstatistik/blob/main/CHANGELOG.md"
+
+[tool.setuptools]
+packages = ["brastat", "brastat.cli", "brastat.analysis"]
+
+[tool.setuptools.package-data]
+brastat = ["*.pem", "config/*.json"]
+"brastat.analysis" = ["templates/*.html"]
+
+[tool.setuptools.dynamic]
+version = { attr = "brastat.__version__" }
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+extend-exclude = [".pandaos", ".claude", "data"]
+
+[tool.ruff.lint]
+# E/W: pycodestyle, F: pyflakes (oanvända importer, odefinierade namn), I: importordning,
+# B: bugbear (vanliga buggmönster), UP: moderniseringar för py3.10.
+select = ["E", "W", "F", "I", "B", "UP"]
+ignore = [
+    "E501",  # radlängd: dashboardkoden har långa formel- och stilrader (formateras inte)
+    "B905",  # zip(strict=): flera zip() kortar avsiktligt mot en palett
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Testerna lägger till sökvägar/hoppar över importer före import av valfria beroenden.
+"tests/*" = ["E402"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["brastat"]
+
+[tool.ruff.format]
+# Kärnbiblioteket formateras med ruff format (kontrolleras i CI). Analys-/dashboardkoden och
+# kommandona har handformaterade tabeller och formler och lämnas orörda.
+exclude = ["brastat/analysis/*", "brastat/cli/*", "scripts/*", "tests/*", "*.md"]
+
+[tool.mypy]
+# Stegvis typkontroll: kärnbiblioteket (hämtning, tolkning, hälsa) kontrolleras i CI.
+python_version = "3.10"
+files = ["brastat"]
+warn_unused_ignores = true
+warn_redundant_casts = true
+check_untyped_defs = true
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# Analys-/dashboardkoden (pandas-tung) typkontrolleras inte ännu.
+module = ["brastat.analysis.*"]
+ignore_errors = true

@@ -1,13 +1,8 @@
-"""Offline-test för ordningen på månadsfiler i scripts/parse_bra.py."""
-import sys
+"""Offline-test för ordningen på månadsfiler i brastat.analysis.parse_bra."""
 import unittest
-from pathlib import Path
-
-ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT / "scripts"))
 
 try:
-    import parse_bra as pb  # noqa: E402
+    from brastat.analysis import parse_bra as pb
 except ImportError:  # pandas saknas
     pb = None
 

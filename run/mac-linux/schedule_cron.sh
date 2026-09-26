@@ -5,7 +5,7 @@
 set -euo pipefail
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 TAG="# bra-kriminalstatistik"
-LINE="0 7 15 * * /bin/bash \"$REPO/run/mac-linux/fetch_all.sh\" --no-pdf >> \"$REPO/data/logs/fetch.log\" 2>&1 $TAG"
+LINE="0 7 15 * * /bin/bash \"$REPO/run/mac-linux/fetch_all.sh\" --no-pdf --notify >> \"$REPO/data/logs/fetch.log\" 2>&1 $TAG"
 mkdir -p "$REPO/data/logs"
 CUR="$(crontab -l 2>/dev/null | grep -v "$TAG" || true)"
 if [ "${1:-}" = "--remove" ]; then

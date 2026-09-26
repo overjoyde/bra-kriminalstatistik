@@ -24,7 +24,7 @@ cat > "$PLIST" <<PL
 <plist version="1.0"><dict>
   <key>Label</key><string>$LABEL</string>
   <key>ProgramArguments</key><array>
-    <string>/bin/bash</string><string>$REPO/run/mac-linux/fetch_all.sh</string><string>--no-pdf</string>
+    <string>/bin/bash</string><string>$REPO/run/mac-linux/fetch_all.sh</string><string>--no-pdf</string><string>--notify</string>
   </array>
   <key>StartCalendarInterval</key><dict><key>Day</key><integer>$DAY</integer><key>Hour</key><integer>$HOUR</integer><key>Minute</key><integer>0</integer></dict>
   <key>StandardOutPath</key><string>$REPO/data/logs/fetch.log</string>

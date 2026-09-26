@@ -20,11 +20,15 @@ Egenheter i just denna databas:
   ``".."`` = uppgift saknas. ``"-"`` blir 0, övriga blir tomt värde; symbolen sparas i kolumnen ``symbol``.
 - Anropsgräns (``?config``): 10 anrop per 10 sekunder och högst 100 000 celler per uttag.
 """
+
 from __future__ import annotations
 
+import builtins
 import json
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass, field
+from typing import Any
 
 from .http import Client
 
@@ -116,36 +120,49 @@ def parse_metadata(path: str, meta: dict) -> Table:
     return Table(
         path=norm_table(path),
         title=meta.get("title", ""),
-        variables=[Variable(v["code"], v["text"], list(v["values"]), list(v["valueTexts"]),
-                            bool(v.get("time")), bool(v.get("elimination"))) for v in meta["variables"]],
+        variables=[
+            Variable(
+                v["code"],
+                v["text"],
+                list(v["values"]),
+                list(v["valueTexts"]),
+                bool(v.get("time")),
+                bool(v.get("elimination")),
+            )
+            for v in meta["variables"]
+        ],
     )
 
 
 def select_years(var: Variable, spec: str | int | list | None) -> list[str]:
-    """Årsurval: None/'alla', 'senaste', 'senaste:3', '2015-2025', '2015-' , '2024,2025' eller lista."""
+    """Årsurval: None/'alla', 'senaste', 'senaste:3', '2015-2025', '2015-', '-2005', '2024,2025' eller lista.
+
+    Ett urval som inte matchar något år ger ValueError (i stället för en tom fråga mot API:et).
+    """
     years = var.texts
     if spec is None or (isinstance(spec, str) and spec.strip().lower() in _ALL):
         return list(var.values)
-    if isinstance(spec, (list, tuple)):
-        wanted = {str(s) for s in spec}
-        return [c for c, t in zip(var.values, years) if t in wanted]
     s = str(spec).strip().lower()
-    m = re.fullmatch(r"senaste(?::(\d+))?", s)
-    if m:
+    if isinstance(spec, (list, tuple)):
+        wanted = {str(x).strip() for x in spec}
+        out = [c for c, t in zip(var.values, years) if t in wanted]
+    elif m := re.fullmatch(r"senaste(?::(\d+))?", s):
         n = int(m.group(1) or 1)
-        return list(var.values[-n:])
-    m = re.fullmatch(r"(\d{4})?\s*-\s*(\d{4})?", s)
-    if m and (m.group(1) or m.group(2)):
+        if n < 1:
+            raise ValueError(f"'{spec}': antalet år måste vara minst 1")
+        out = list(var.values[-n:])
+    elif (m := re.fullmatch(r"(\d{4})?\s*-\s*(\d{4})?", s)) and (m.group(1) or m.group(2)):
         lo, hi = int(m.group(1) or 0), int(m.group(2) or 9999)
-        return [c for c, t in zip(var.values, years) if t.isdigit() and lo <= int(t) <= hi]
-    wanted = {x.strip() for x in s.split(",")}
-    out = [c for c, t in zip(var.values, years) if t in wanted]
+        out = [c for c, t in zip(var.values, years) if t.isdigit() and lo <= int(t) <= hi]
+    else:
+        wanted = {x.strip() for x in s.split(",")}
+        out = [c for c, t in zip(var.values, years) if t in wanted]
     if not out:
         raise ValueError(f"Inga år matchar '{spec}' (finns: {years[0]}–{years[-1]})")
     return out
 
 
-def build_query(table: Table, selections: dict[str, object] | None = None, years: object = None) -> dict:
+def build_query(table: Table, selections: Mapping[str, Any] | None = None, years: Any = None) -> dict:
     """Bygg PxWeb-frågan. Ovalda variabler tas med i sin helhet (DOMstat saknar eliminering)."""
     selections = {k.lower(): v for k, v in (selections or {}).items()}
     query = []
@@ -180,8 +197,15 @@ def parse_result(table: Table, result: dict) -> list[dict]:
     fallback_var = table.title or (content[0]["text"] if content else "")
     rows = []
     for rec in result["data"]:
-        r = {"tabell": table_id, "tabell_titel": table.title, "domstol": "", "dimension": "",
-             "dimensionsvarde": "", "variabel": fallback_var, "ar": ""}
+        r = {
+            "tabell": table_id,
+            "tabell_titel": table.title,
+            "domstol": "",
+            "dimension": "",
+            "dimensionsvarde": "",
+            "variabel": fallback_var,
+            "ar": "",
+        }
         extra_dim, extra_val = [], []
         for v, code in zip(vars_, rec["key"]):
             text = v.text_of(code)
@@ -221,11 +245,11 @@ class DomstatClient:
     def _get_json(self, url: str):
         return json.loads(self.http.get(url).decode("utf-8-sig"))
 
-    def list(self, folder: str = "") -> list[dict]:
+    def list(self, folder: str = "") -> builtins.list[dict]:
         f = "/" + folder.strip("/") if folder.strip("/") else ""
         return self._get_json(self.base + f)
 
-    def tree(self, folder: str = "") -> list[dict]:
+    def tree(self, folder: str = "") -> builtins.list[dict]:
         """Alla tabeller rekursivt: [{'path', 'mapp', 'mapp_text', 'text', 'updated'}]."""
         out = []
 
@@ -235,8 +259,15 @@ class DomstatClient:
                 if n.get("type") == "l":
                     walk(p, n.get("text", ""))
                 elif n.get("type") == "t":
-                    out.append({"path": p.removesuffix(".px"), "mapp": prefix, "mapp_text": folder_text,
-                                "text": n.get("text", ""), "updated": n.get("updated", "")})
+                    out.append(
+                        {
+                            "path": p.removesuffix(".px"),
+                            "mapp": prefix,
+                            "mapp_text": folder_text,
+                            "text": n.get("text", ""),
+                            "updated": n.get("updated", ""),
+                        }
+                    )
 
         walk(folder.strip("/"), "")
         return out
@@ -247,7 +278,7 @@ class DomstatClient:
             self._meta[p] = parse_metadata(p, self._get_json(self.base + p))
         return self._meta[p]
 
-    def query(self, path: str, selections: dict[str, object] | None = None, years: object = None) -> list[dict]:
+    def query(self, path: str, selections: Mapping[str, Any] | None = None, years: Any = None) -> builtins.list[dict]:
         t = self.table(path)
         payload = build_query(t, selections, years)
         result = json.loads(self.http.post_json(self.base + t.path, payload).decode("utf-8-sig"))

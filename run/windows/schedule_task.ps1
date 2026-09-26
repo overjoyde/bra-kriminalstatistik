@@ -22,7 +22,7 @@ $ps1 = Join-Path $Repo "run\windows\fetch_all.ps1"
 @"
 @echo off
 cd /d "$Repo"
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$ps1" --no-pdf >> "$log" 2>&1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$ps1" --no-pdf --notify >> "$log" 2>&1
 "@ | Set-Content -Path $Wrapper -Encoding ASCII
 
 schtasks.exe /Create /F /TN $Name /SC MONTHLY /D $Day /ST $Time /TR "`"$Wrapper`"" | Out-Null

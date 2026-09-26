@@ -1,12 +1,9 @@
 """Offline-test för cachning i brastat.tabeller (kör: python -m unittest discover -s tests)."""
-import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
-from brastat.tabeller import TableFetcher  # noqa: E402
+from brastat.tabeller import TableFetcher
 
 OLD = "https://bra.se/download/18.1/1000/P4LaDec-2025.xlsx"
 NEW = "https://bra.se/download/18.2/2000/P4LaDec-2025.xlsx"

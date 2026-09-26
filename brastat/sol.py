@@ -17,6 +17,7 @@ SOL has no official API. It is an old Struts/JSP frameset application:
 This module re-implements that flow. The session is bound to one menu at a time,
 so a new menu selection is made whenever you switch menu.
 """
+
 from __future__ import annotations
 
 import csv
@@ -34,11 +35,20 @@ MAX_CELLS = 10_000  # SOL refuses larger queries
 MENUS: dict[str, dict] = {
     "brottstyp-ar-region": {"id": 98, "desc": "Brottstyp, årsvis – land och län 1975–2014, land och polisregion 2015–"},
     "brottstyp-ar-kommun": {"id": 101, "desc": "Brottstyp, årsvis – kommun och storstädernas stadsområden 1996–"},
-    "brottstyp-manad-region": {"id": 34, "desc": "Brottstyp, månads- och kvartalsvis – land och län 1975–2014, land och region 2015–"},
-    "brottstyp-manad-kommun": {"id": 90, "desc": "Brottstyp, månads- och kvartalsvis – kommun och stadsområden 1996– (sekretessbegränsad)"},
+    "brottstyp-manad-region": {
+        "id": 34,
+        "desc": "Brottstyp, månads- och kvartalsvis – land och län 1975–2014, land och region 2015–",
+    },
+    "brottstyp-manad-kommun": {
+        "id": 90,
+        "desc": "Brottstyp, månads- och kvartalsvis – kommun och stadsområden 1996– (sekretessbegränsad)",
+    },
     "brottskod-ar-region": {"id": 104, "desc": "Brottskod, årsvis – land och län 1975–2014, land och region 2015–"},
     "brottskod-ar-kommun": {"id": 107, "desc": "Brottskod, årsvis – kommun och storstädernas stadsområden 1996–"},
-    "brottskod-manad-region": {"id": 46, "desc": "Brottskod, månads- och kvartalsvis – land och län 1975–2014, land och region 2015–"},
+    "brottskod-manad-region": {
+        "id": 46,
+        "desc": "Brottskod, månads- och kvartalsvis – land och län 1975–2014, land och region 2015–",
+    },
 }
 
 MONTHS = ["Jan", "Feb", "Mar", "Apr", "Maj", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dec"]
@@ -58,11 +68,11 @@ def _depth(name: str) -> int:
 @dataclass
 class Crime:
     id: str
-    name: str          # label as shown (trimmed)
-    parent_id: str     # id of the node in arrayNivaett
-    path: str          # full path as given by SOL
-    depth: int         # indentation level inside the parent node
-    code: str = ""     # 4-digit brottskod (brottskod menus only)
+    name: str  # label as shown (trimmed)
+    parent_id: str  # id of the node in arrayNivaett
+    path: str  # full path as given by SOL
+    depth: int  # indentation level inside the parent node
+    code: str = ""  # 4-digit brottskod (brottskod menus only)
 
     @property
     def label(self) -> str:
@@ -77,7 +87,7 @@ class Period:
     name: str
     year: int
     prel: bool
-    kind: str          # "ar", "helar", "kvartal", "manad"
+    kind: str  # "ar", "helar", "kvartal", "manad"
     month: int | None = None
     quarter: int | None = None
 
@@ -93,9 +103,9 @@ class Period:
 @dataclass
 class Catalog:
     menu: str
-    tree: list[tuple[str, str, int]] = field(default_factory=list)   # (id, name, depth)
+    tree: list[tuple[str, str, int]] = field(default_factory=list)  # (id, name, depth)
     crimes: list[Crime] = field(default_factory=list)
-    regions: dict[str, str] = field(default_factory=dict)            # name -> id
+    regions: dict[str, str] = field(default_factory=dict)  # name -> id
     periods: list[Period] = field(default_factory=list)
 
     # ---- lookups -------------------------------------------------------
@@ -137,10 +147,10 @@ class Catalog:
             return sorted((p for p in monthly if lo <= (p.year, p.month) <= hi), key=lambda p: (p.year, p.month))
         m = re.fullmatch(r"(\d{4})-(\d{4})", spec)
         if m:
-            lo, hi = int(m[1]), int(m[2])
+            y_lo, y_hi = int(m[1]), int(m[2])
             if yearly:
-                return sorted((p for p in yearly if lo <= p.year <= hi), key=lambda p: p.year)
-            return sorted((p for p in monthly if lo <= p.year <= hi), key=lambda p: (p.year, p.month))
+                return sorted((p for p in yearly if y_lo <= p.year <= y_hi), key=lambda p: p.year)
+            return sorted((p for p in monthly if y_lo <= p.year <= y_hi), key=lambda p: (p.year, p.month))
         years = {int(y) for y in re.split(r"[,\s]+", spec) if y}
         if yearly:
             return sorted((p for p in yearly if p.year in years), key=lambda p: p.year)
@@ -164,8 +174,11 @@ def parse_catalog(html: str, menu: str) -> Catalog:
         raw = p[1]
         name = raw.strip(_NBSP + " ")
         m = re.match(r"(\d{4}) - ", name)
-        cat.crimes.append(Crime(id=p[0], name=name, parent_id=p[2], path=p[3].strip(),
-                                depth=_depth(raw), code=m.group(1) if m else ""))
+        cat.crimes.append(
+            Crime(
+                id=p[0], name=name, parent_id=p[2], path=p[3].strip(), depth=_depth(raw), code=m.group(1) if m else ""
+            )
+        )
 
     for v in arrays.get("arrayRegionNivaTva", []):
         p = v.split(SEP)
@@ -258,17 +271,20 @@ class SolClient:
         return self._catalogs[menu]
 
     # ---- query --------------------------------------------------------
-    def _run(self, crime_ids: list[str], region_ids: list[str], period_ids: list[str],
-             per_100k: bool) -> list[dict]:
+    def _run(self, crime_ids: list[str], region_ids: list[str], period_ids: list[str], per_100k: bool) -> list[dict]:
         urval = f"{BASE}/anmalda/urval"
-        self.http.post(f"{urval}/vantapopup", {
-            "brottstyp_id_string": SEP.join(crime_ids),
-            "region_id_string": SEP.join(region_ids),
-            "period_id_string": SEP.join(period_ids),
-            "fordelning_id_string": "",
-            "antal": "1",
-            "antal_100k": "1" if per_100k else "0",
-        }, referer=f"{urval}/minaval")
+        self.http.post(
+            f"{urval}/vantapopup",
+            {
+                "brottstyp_id_string": SEP.join(crime_ids),
+                "region_id_string": SEP.join(region_ids),
+                "period_id_string": SEP.join(period_ids),
+                "fordelning_id_string": "",
+                "antal": "1",
+                "antal_100k": "1" if per_100k else "0",
+            },
+            referer=f"{urval}/minaval",
+        )
         page = self.http.get(f"{urval}/sok", referer=f"{urval}/vantapopup").decode("latin-1", "replace")
         if "Fel/Error" in page:
             msg = re.search(r"Felmeddelande:\s*([^<]+)", page)
@@ -276,9 +292,16 @@ class SolClient:
         data = self.http.post(f"{BASE}/anmalda/resultat/dbfil", {}, referer=f"{urval}/sok")
         return parse_dbfil(data.decode("latin-1", "replace"))
 
-    def query(self, menu: str, *, crime_ids: list[str] | None = None, codes: list[str] | None = None,
-              regions: list[str] | None = None, periods: str | list[str] = "senaste",
-              per_100k: bool = True) -> list[dict]:
+    def query(
+        self,
+        menu: str,
+        *,
+        crime_ids: list[str] | None = None,
+        codes: list[str] | None = None,
+        regions: list[str] | None = None,
+        periods: str | list[str] = "senaste",
+        per_100k: bool = True,
+    ) -> list[dict]:
         """Return tidy rows: meny, brott_id, brottskod, brott, sokvag, omrade, period, ar, manad,
         kvartal, periodtyp, preliminar, antal, per_100k.
 
@@ -291,8 +314,11 @@ class SolClient:
             raise ValueError("Ange minst ett brotts-id eller en brottskod.")
         region_names = regions or ["Hela landet"]
         region_ids = [cat.region_id(r) for r in region_names]
-        pers = cat.select_periods(periods) if isinstance(periods, str) else [
-            p for p in cat.periods if p.id in set(periods)]
+        pers = (
+            cat.select_periods(periods)
+            if isinstance(periods, str)
+            else [p for p in cat.periods if p.id in set(periods)]
+        )
         if not pers:
             raise ValueError(f"Inga perioder matchade '{periods}'.")
 
@@ -311,26 +337,28 @@ class SolClient:
         for batch in batches:
             per_chunk = max(1, MAX_CELLS // (len(batch) * len(region_ids) * units))
             for i in range(0, len(pers), per_chunk):
-                chunk = pers[i:i + per_chunk]
+                chunk = pers[i : i + per_chunk]
                 rows = self._run([c.id for c in batch], region_ids, [p.id for p in chunk], per_100k)
                 wanted = {c.label: c for c in batch}
                 found: dict[tuple, dict] = {}
                 for r in rows:
-                    c = wanted.get(r.get("Brott", ""))
-                    if not c:
+                    crime = wanted.get(r.get("Brott", ""))
+                    if not crime:
                         continue
                     yr_raw, per_raw = r.get("År", ""), r.get("Period", "")
                     prel = "prel" in yr_raw or "prel" in per_raw
                     year_m = re.search(r"\d{4}", yr_raw) or re.search(r"\d{4}", per_raw)
                     year = int(year_m.group(0)) if year_m else None
-                    p = next((cand for cand in chunk if cand.year == year
-                              and (cand.kind == "ar" or cand.name == per_raw)), None)
+                    p = next(
+                        (cand for cand in chunk if cand.year == year and (cand.kind == "ar" or cand.name == per_raw)),
+                        None,
+                    )
                     rec = {
                         "meny": menu,
-                        "brott_id": c.id,
-                        "brottskod": c.code,
-                        "brott": c.label,
-                        "sokvag": c.path,
+                        "brott_id": crime.id,
+                        "brottskod": crime.code,
+                        "brott": crime.label,
+                        "sokvag": crime.path,
                         "omrade": r.get("Region"),
                         "period": p.key if p else f"{year}",
                         "ar": year,
@@ -341,7 +369,7 @@ class SolClient:
                         "antal": _num(r.get("Antal")),
                         "per_100k": _num(r.get("/100 000 inv")) if per_100k else None,
                     }
-                    key = (c.id, rec["omrade"], per_raw, yr_raw)
+                    key = (crime.id, rec["omrade"], per_raw, yr_raw)
                     # ancestors of a selected crime are echoed with ".." – keep the row with values
                     if key not in found or (found[key]["antal"] is None and rec["antal"] is not None):
                         found[key] = rec

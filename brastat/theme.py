@@ -1,6 +1,6 @@
 """Färgteman för matplotlib, samma paletter som HTML-dashboarden.
 
-Används av scripts/make_charts.py och fungerar direkt i en notebook
+Används av brastat/analysis/charts.py (scripts/make_charts.py) och fungerar direkt i en notebook
 (Jupyter, Colab, BigQuery Studio):
 
     from brastat import theme
@@ -10,6 +10,7 @@ Används av scripts/make_charts.py och fungerar direkt i en notebook
 Modulen byter aldrig matplotlib-backend, så grafer fortsätter att visas
 i notebookens celler. matplotlib importeras först när apply() anropas.
 """
+
 from __future__ import annotations
 
 # Serieordning: blå, orange, grön, röd, lila, brun, rosa, grå.
@@ -21,17 +22,36 @@ PALETTES = {
 
 # Bakgrund och förgrund (text, nollinjer).
 COLORS = {
-    "light": {"bg": "white", "fg": "black", "muted": "black", "edge": "black", "grid": "#b0b0b0",
-              "legend_bg": "white", "legend_edge": "#cccccc"},
-    "dark": {"bg": "#171c25", "fg": "#e3e6eb", "muted": "#9aa3b2", "edge": "#5c6677", "grid": "#5c6677",
-             "legend_bg": "#141922", "legend_edge": "#394254"},
+    "light": {
+        "bg": "white",
+        "fg": "black",
+        "muted": "black",
+        "edge": "black",
+        "grid": "#b0b0b0",
+        "legend_bg": "white",
+        "legend_edge": "#cccccc",
+    },
+    "dark": {
+        "bg": "#171c25",
+        "fg": "#e3e6eb",
+        "muted": "#9aa3b2",
+        "edge": "#5c6677",
+        "grid": "#5c6677",
+        "legend_bg": "#141922",
+        "legend_edge": "#394254",
+    },
 }
 
 # Grundstil som gäller oavsett tema.
 BASE = {
-    "axes.spines.top": False, "axes.spines.right": False,
-    "axes.grid": True, "grid.alpha": 0.3, "axes.titlesize": 12,
-    "legend.frameon": True, "legend.fontsize": 9, "axes.formatter.use_locale": False,
+    "axes.spines.top": False,
+    "axes.spines.right": False,
+    "axes.grid": True,
+    "grid.alpha": 0.3,
+    "axes.titlesize": 12,
+    "legend.frameon": True,
+    "legend.fontsize": 9,
+    "axes.formatter.use_locale": False,
 }
 
 
@@ -43,11 +63,20 @@ def rc(name: str = "dark", base: bool = True) -> dict:
 
     c = COLORS[name]
     params = {
-        "figure.facecolor": c["bg"], "axes.facecolor": c["bg"], "savefig.facecolor": c["bg"],
-        "axes.edgecolor": c["edge"], "axes.labelcolor": c["fg"], "axes.titlecolor": c["fg"],
-        "text.color": c["fg"], "xtick.color": c["muted"], "ytick.color": c["muted"],
-        "grid.color": c["grid"], "legend.facecolor": c["legend_bg"], "legend.edgecolor": c["legend_edge"],
-        "legend.labelcolor": c["fg"], "axes.prop_cycle": cycler(color=PALETTES[name]),
+        "figure.facecolor": c["bg"],
+        "axes.facecolor": c["bg"],
+        "savefig.facecolor": c["bg"],
+        "axes.edgecolor": c["edge"],
+        "axes.labelcolor": c["fg"],
+        "axes.titlecolor": c["fg"],
+        "text.color": c["fg"],
+        "xtick.color": c["muted"],
+        "ytick.color": c["muted"],
+        "grid.color": c["grid"],
+        "legend.facecolor": c["legend_bg"],
+        "legend.edgecolor": c["legend_edge"],
+        "legend.labelcolor": c["fg"],
+        "axes.prop_cycle": cycler(color=PALETTES[name]),
     }
     return {**BASE, **params} if base else params
 

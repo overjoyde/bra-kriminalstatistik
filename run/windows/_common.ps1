@@ -20,6 +20,8 @@ if (Test-Path $VenvPy) {
 # Svenska tecken i konsolen
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $env:PYTHONIOENCODING = "utf-8"
+# Gör brastat importerbart även utan "pip install -e ." (t.ex. systemets Python).
+$env:PYTHONPATH = if ($env:PYTHONPATH) { "$Repo$([IO.Path]::PathSeparator)$env:PYTHONPATH" } else { $Repo }
 
 function Invoke-Py([string[]]$Arguments) {
     $exe = $Py[0]

@@ -11,3 +11,5 @@ else
   exit 1
 fi
 cd "$REPO"
+# Gör brastat importerbart även utan "pip install -e ." (t.ex. systemets python3).
+export PYTHONPATH="$REPO${PYTHONPATH:+:$PYTHONPATH}"

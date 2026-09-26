@@ -11,10 +11,12 @@
   ``digicert_ev_rsa_ca_g2.pem`` and added to the trust store so Linux works too.
 - Adds a polite delay between requests.
 """
+
 from __future__ import annotations
 
 import http.cookiejar
 import json
+import logging
 import os
 import shutil
 import ssl
@@ -24,26 +26,30 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import weakref
 from pathlib import Path
 
 USER_AGENT = (
     "Mozilla/5.0 (bra-kriminalstatistik; offentlig statistik, "
     "vidareutnyttjande enligt Brås PSI-villkor; +https://github.com/overjoyde/bra-kriminalstatistik)"
 )
+log = logging.getLogger(__name__)
+
 DEFAULT_DELAY = 0.3  # seconds between requests – be nice to bra.se
 # Intermediate missing from statistik.bra.se's chain (see module docstring). Valid until 2030-07-02.
 EXTRA_CA = Path(__file__).with_name("digicert_ev_rsa_ca_g2.pem")
 
 
 def _ssl_context() -> ssl.SSLContext:
+    ctx: ssl.SSLContext
     try:
-        import truststore  # type: ignore
+        import truststore
 
         ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     except ImportError:
         ctx = ssl.create_default_context()
         try:
-            import certifi  # type: ignore
+            import certifi
 
             ctx.load_verify_locations(certifi.where())
         except ImportError:
@@ -70,28 +76,55 @@ class Client:
             urllib.request.HTTPSHandler(context=_ssl_context()),
         )
         self.use_curl = os.environ.get("BRASTAT_HTTP", "").lower() == "curl"
-        self._curl_jar = os.path.join(tempfile.mkdtemp(prefix="brastat-"), "cookies.txt")
+        self._tmpdir = tempfile.mkdtemp(prefix="brastat-")
+        self._curl_jar = os.path.join(self._tmpdir, "cookies.txt")
+        # Städa bort cookie-burken och ev. kvarlämnade filer när klienten försvinner.
+        weakref.finalize(self, shutil.rmtree, self._tmpdir, ignore_errors=True)
 
-    def _curl(self, url: str, body: bytes | None, referer: str | None,
-              content_type: str = "application/x-www-form-urlencoded") -> bytes:
+    def _curl(
+        self, url: str, body: bytes | None, referer: str | None, content_type: str = "application/x-www-form-urlencoded"
+    ) -> bytes:
         exe = shutil.which("curl") or shutil.which("curl.exe")
         if not exe:
             raise RuntimeError("TLS-verifiering misslyckades och curl saknas. Kör: pip install truststore")
         # curl --retry räknar 429 (Too Many Requests) som tillfälligt fel och respekterar Retry-After.
-        cmd = [exe, "-sSfL", "--retry", str(self.retries), "--max-time", str(int(self.timeout)),
-               "-A", USER_AGENT, "-b", self._curl_jar, "-c", self._curl_jar]
+        cmd = [
+            exe,
+            "-sSfL",
+            "--retry",
+            str(self.retries),
+            "--max-time",
+            str(int(self.timeout)),
+            "-A",
+            USER_AGENT,
+            "-b",
+            self._curl_jar,
+            "-c",
+            self._curl_jar,
+        ]
         if referer:
             cmd += ["-e", referer]
+        body_file = None
         if body is not None:
-            cmd += ["--data-binary", "@-", "-H", f"Content-Type: {content_type}"]
-        r = subprocess.run(cmd + [url], input=body, capture_output=True)
+            # Kroppen läses från en temporär fil i stället för stdin, så att curl aldrig
+            # konkurrerar med anroparens stdin (t.ex. när skriptet körs i en pipe).
+            fd, body_file = tempfile.mkstemp(prefix="body-", dir=self._tmpdir)
+            with os.fdopen(fd, "wb") as f:
+                f.write(body)
+            cmd += ["--data-binary", f"@{body_file}", "-H", f"Content-Type: {content_type}"]
+        try:
+            r = subprocess.run(cmd + [url], stdin=subprocess.DEVNULL, capture_output=True)
+        finally:
+            if body_file:
+                os.remove(body_file)
         if r.returncode != 0:
             raise RuntimeError(f"curl misslyckades ({r.returncode}) för {url}: {r.stderr.decode(errors='replace')}")
         time.sleep(self.delay)
         return r.stdout
 
-    def request(self, url: str, data: dict | None = None, referer: str | None = None,
-                json_body: object | None = None) -> bytes:
+    def request(
+        self, url: str, data: dict | None = None, referer: str | None = None, json_body: object | None = None
+    ) -> bytes:
         headers = {"User-Agent": USER_AGENT, "Accept-Encoding": "identity"}
         content_type = "application/x-www-form-urlencoded"
         if json_body is not None:
@@ -126,6 +159,7 @@ class Client:
                 if _is_ssl_error(e):
                     # Switch permanently to curl for this client (keeps its own cookie jar,
                     # so callers should create the client before starting a SOL session).
+                    log.warning("TLS-verifiering misslyckades (%s) – byter till systemets curl", e)
                     self.use_curl = True
                     return self._curl(url, body, referer, content_type)
                 last = e
