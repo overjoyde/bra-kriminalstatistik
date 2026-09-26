@@ -61,11 +61,25 @@ start data\dashboard\Bra_trendbevakning_dashboard.html
 
 > Kräver Python 3.10 eller senare. På Windows: `winget install Python.Python.3.12`. Själva hämtningen använder bara standardbiblioteket. pandas, openpyxl och matplotlib behövs bara för analys och grafer.
 
+<details>
+<summary><b>Manuell installation</b> (utan setup-skripten)</summary>
+
+`setup` skapar `.venv`, installerar de låsta versionerna i `requirements.lock` och paketet `brastat` i redigerbart läge. Samma sak för hand:
+
+```bash
+python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\activate
+pip install -r requirements.lock                       # exakta, testade versioner
+pip install --no-deps -e .                             # gör `import brastat` tillgängligt för skripten
+```
+
+Utan låsfil: `pip install -e ".[analysis]"` (bara hämtning: `pip install -e .`, export till Parquet/DuckDB: `".[analysis,export]"`). Körskripten i `run/` fungerar även utan installation – de sätter `PYTHONPATH` till repot.
+</details>
+
 ---
 
 ## 💡 Vad kan man göra med datan?
 
-Alla grafer nedan skapas från den hämtade datan med `python scripts/make_charts.py` (eller `run/…/make_charts`). Koden i [`scripts/make_charts.py`](scripts/make_charts.py) kan användas som mall för egna analyser. Siffrorna gäller hämtningen 2026-09-24.
+Alla grafer nedan skapas från den hämtade datan med `python scripts/make_charts.py` (eller `run/…/make_charts`, eller kommandot `brastat-charts`). Koden i [`brastat/analysis/charts.py`](brastat/analysis/charts.py) kan användas som mall för egna analyser. Siffrorna gäller hämtningen 2026-09-24.
 
 ### 1. Följa trender månad för månad
 
@@ -145,7 +159,13 @@ Tabell 220 (misstänkta personer efter brottstyp, ålder och kön) visar ålders
 
 <img src="docs/img/07_prognos.png" alt="Prognos 6 månader">
 
-Månadsserierna räcker för enkla prognoser och **avvikelselarm**, t.ex. att flagga när en månad hamnar utanför 90 %-intervallet. Exemplet använder en beroendefri säsongs- och trendmodell (`seasonal_forecast()` i `make_charts.py`). Byt gärna till ETS, Prophet, TimesFM eller BigQuery `AI.FORECAST`.
+Månadsserierna räcker för enkla prognoser och **avvikelselarm**, t.ex. att flagga när en månad hamnar utanför 90 %-intervallet. Exemplet använder en beroendefri säsongs- och trendmodell (`seasonal_forecast()` i [`brastat/analysis/charts.py`](brastat/analysis/charts.py)). Byt gärna till ETS, Prophet, TimesFM eller BigQuery `AI.FORECAST`.
+
+### 8. Domstolsledet och insolvens
+
+<img src="docs/img/08_domstat_insolvens_brottmal.png" alt="Insolvensärenden och brottmål i tingsrätt">
+
+Domstolsverkets DOMstat kompletterar Brå med vad som händer i domstolarna. **Konkursärendena har ökat med över 50 % sedan 2022**, och antalet inkomna brottmål i tingsrätt har ökat nästan lika brant som anmälda penningtvättsbrott. DOMstat saknar brottskoder, så brottmålen gäller alla brottstyper – jämförelsen visar belastningen i lagföringskedjan, inte ett orsakssamband. Samma serier finns i HTML-dashboarden.
 
 ### Fler idéer
 
@@ -203,11 +223,16 @@ befogenhetsbedrageri;Social manipulation (APP-bedrägeri);brottstyp-manad-region
 | DOMstat: eget uttag | `scripts/domstat_query.py` | `domstat_query.sh` | `domstat_query.bat` |
 | DOMstat: sök tabeller | `scripts/domstat_catalog.py` | `domstat_catalog.sh` | `domstat_catalog.bat` |
 | Exempelgrafer och årstabell | `scripts/make_charts.py` | `make_charts.sh` | `make_charts.bat` |
+| **Hälsokontroll** (fel, luckor, revideringar, certifikat) | `scripts/check_health.py` | `check_health.sh` | `check_health.bat` |
 | Excel- och HTML-dashboard | `scripts/build_excel_dashboard.py`, `build_html_dashboard.py` | `build_dashboards.sh` | `build_dashboards.bat` |
+| Export till Parquet/DuckDB | `scripts/export_data.py` | `export_data.sh` | `export_data.bat` |
+| Livetest mot källorna | `scripts/smoke_live.py` | `smoke_live.sh` | `smoke_live.bat` |
 | Schemalägg månadsvis | – | `schedule_macos.sh` / `schedule_cron.sh` | `schedule_task.bat` |
 | Felsök bra.se-formulär | `scripts/inspect_forms.py` | – | – |
 
-Varje `.bat` har en `.ps1` bredvid sig, och alla skript har `--help`. Argument skickas vidare till Python.
+Varje `.bat` har en `.ps1` bredvid sig, och alla skript har `--help`. Argument skickas vidare till Python. Skripten i `scripts/` är tunna skal – koden finns i paketet (`brastat/cli/` och `brastat/analysis/`). Efter `pip install -e .` finns samma verktyg även som kommandon: `brastat-fetch-all`, `brastat-health`, `brastat-sol-query`, `brastat-domstat-query`, `brastat-charts`, `brastat-export`, `brastat-smoke` m.fl. (se `[project.scripts]` i `pyproject.toml`).
+
+Loggningen går till stderr: i en terminal som vanlig text, annars (schemalagt, CI) med tidsstämpel och nivå. `-v`/`-q` ger mer eller mindre, och `BRASTAT_LOG_TIMESTAMPS=1`/`0` tvingar fram eller stänger av tidsstämplarna.
 
 ### Egna uttag ur SOL
 
@@ -257,16 +282,30 @@ Värden väljs med de svenska texterna. Se [docs/04-domstolsverket-domstat.md](d
 
 ### Egen bevakningslista
 
-Kopiera [`config/watchlist_aml_fraud.json`](config/watchlist_aml_fraud.json), lägg till eller ta bort serier och kör `python scripts/sol_watchlist.py --config config/min_lista.json`. En serie anges så här:
+Kopiera [`brastat/config/watchlist_aml_fraud.json`](brastat/config/watchlist_aml_fraud.json) (eller [`watchlist_domstat.json`](brastat/config/watchlist_domstat.json)) till valfri plats, lägg till eller ta bort serier och kör `python scripts/sol_watchlist.py --config min_lista.json`. Utan `--config` används de medföljande listorna. En serie anges så här:
 
 ```json
 {"namn": "befogenhetsbedrageri_mot_aldre", "kategori": "Social manipulation",
  "meny": "brottskod-manad-region", "koder": ["0950", "0951"], "regioner": ["Hela landet"]}
 ```
 
+Varje körning sparar förra versionen av `watchlist_samlad.csv` som `watchlist_samlad.prev.csv` och som daterad ögonblicksbild i `snapshots/` (gzip, de 24 senaste behålls). Med ögonblicksbilderna kan du följa hur den preliminära statistiken revideras. Misslyckas en serie behålls dess rader från förra körningen, så ett tillfälligt fel hos källan tömmer inte den samlade filen.
+
 ### Schemaläggning
 
 Brå släpper preliminär månadsstatistik cirka 10 dagar efter varje månadsskifte. Standardschemat kör därför **den 15:e varje månad kl. 07:00**.
+
+Sist i `fetch_all` körs **hälsokontrollen** (`check_health.py`). Den läser `data/manifest.csv` och bevakningslistorna och avslutar med felkod om en tabell gav `FEL`, en fil saknas eller är tom, eller om en hel grupp misslyckades (typiskt att Brå bytt URL-mönster). Den varnar också för `saknas`, ett manifest äldre än 40 dagar, SOL-data som släpar mer än tre månader, serier som försvunnit eller tappat rader sedan förra körningen, **slutliga värden som reviderats mer än 5 %** och när det medföljande mellancertifikatet för statistik.bra.se (giltigt till 2030-07-02) har mindre än ett halvår kvar. `--strict` gör varningar till fel och `--verify` kontrollerar sha256 mot filerna. Hoppa över med `fetch_all --skip-health`.
+
+**Aviseringar.** De schemalagda körningarna skickar `--notify`: hittar hälsokontrollen fel visas en skrivbordsavisering (macOS, Linux, Windows) och, om de är konfigurerade, ett webhook-meddelande och ett e-postmeddelande. Inga hemligheter lagras i repot – allt styrs med miljövariabler:
+
+| Variabel | Betydelse |
+|---|---|
+| `BRASTAT_NOTIFY_WEBHOOK` | URL som får `{"text": "..."}` (t.ex. Slack/Mattermost incoming webhook) |
+| `BRASTAT_NOTIFY_EMAIL` + `BRASTAT_SMTP_HOST` | Mottagare och SMTP-server. Valfritt: `BRASTAT_SMTP_PORT` (587), `BRASTAT_SMTP_USER`, `BRASTAT_SMTP_PASSWORD`, `BRASTAT_SMTP_FROM` |
+| `BRASTAT_NOTIFY_DESKTOP=0` | Stäng av skrivbordsaviseringen |
+
+**Övervakning utan lokal körning.** GitHub Actions kör varje måndag ett livetest mot SOL, DOMstat och bra.se ([`scheduled.yml`](.github/workflows/scheduled.yml)) och testerna mot de senaste beroendeversionerna. Den 1:a varje månad öppnas en PR med uppdaterad låsfil ([`lock-refresh.yml`](.github/workflows/lock-refresh.yml)).
 
 | OS | Installera | Ta bort |
 |---|---|---|
@@ -283,15 +322,24 @@ Brå släpper preliminär månadsstatistik cirka 10 dagar efter varje månadsski
 ```text
 bra-kriminalstatistik/
 ├── brastat/            bibliotek: http.py (klient) · sol.py (SOL) · tabeller.py (bra.se) · domstat.py (Domstolsverket)
-├── scripts/            kommandoradsskript (se tabellen ovan)
+│   │                   · health.py · watchlist.py · notify.py · log.py · paths.py
+│   ├── cli/            kommandoradsverktygen (fetch_all, sol_query, check_health …)
+│   ├── analysis/       tolkning av Brås Excel-tabeller, grafer, Excel- och HTML-dashboard (templates/)
+│   └── config/         medföljande bevakningslistor (JSON)
+├── scripts/            tunna skal för bakåtkompatibilitet (se tabellen ovan)
 ├── run/mac-linux/      .sh-skript + schemaläggning
 ├── run/windows/        .ps1 + .bat + schemaläggning
-├── config/             bevakningslistor (JSON)
 ├── docs/               datakällor · kodkatalog AML/CTF · teknik · Domstolsverket · img/
 ├── reference/          brottskoder_sol.csv · brottstyper_sol.csv
 ├── tests/              offline-tester (körs i CI på Linux, macOS och Windows)
-└── data/               ← skapas vid körning: sol/ domstat/ raw/ docs/ dashboard/ charts/ manifest.csv (checkas inte in)
+├── pyproject.toml      paketmetadata, kommandon, ruff- och mypy-konfiguration
+├── CHANGELOG.md        ändringar per version
+├── requirements.txt    direkta beroenden med versionsintervall
+├── requirements.lock   låsta versioner (setup-skripten och CI)
+└── data/               ← skapas vid körning: sol/ domstat/ raw/ docs/ dashboard/ charts/ export/ manifest.csv (checkas inte in)
 ```
+
+**Datakatalog.** Standard är `data/` i repot. Den styrs med `BRA_DATA_DIR` (eller `--data-dir`/`--out`). Installeras paketet som vanligt paket (inte `-e`) används användarens datakatalog: `~/Library/Application Support/brastat` (macOS), `%LOCALAPPDATA%\brastat` (Windows) eller `~/.local/share/brastat` (Linux).
 
 ## 🛟 Felsökning
 
@@ -316,4 +364,4 @@ Koden är licensierad under MIT, se [LICENSE](LICENSE). **Datan kommer från Bro
 
 Var snäll mot Brås och Domstolsverkets servrar: skripten väntar mellan anropen (DOMstat tillåter högst 10 anrop per 10 sekunder), och en schemalagd körning per månad räcker.
 
-**Bidrag** är välkomna, t.ex. nya serier i bevakningslistan, nya bra.se-tabeller i `brastat/tabeller.py` eller fler analysexempel i `scripts/make_charts.py`. Kör `python -m unittest discover -s tests` innan du skickar en PR.
+**Bidrag** är välkomna, t.ex. nya serier i bevakningslistan, nya bra.se-tabeller i `brastat/tabeller.py` eller fler analysexempel i `scripts/make_charts.py`. Kör `python -m unittest discover -s tests`, `ruff check .`, `ruff format --check .` och `mypy` (`pip install -e ".[dev]"`, eller en gång `pre-commit install` så körs kontrollerna vid varje commit) innan du skickar en PR. Se [CHANGELOG.md](CHANGELOG.md) för versionshistoriken. Ändrar du beroenden: uppdatera `requirements.txt` och `pyproject.toml` och generera om låsfilen med `uv pip compile requirements.txt --universal --python-version 3.10 -o requirements.lock`.

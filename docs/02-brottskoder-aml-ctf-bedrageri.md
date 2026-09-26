@@ -199,7 +199,7 @@ Brottstyp **"9 kap. Bedrägeri och annan oredlighet"** (SOL-id 11096) → **"Bed
 
 ---
 
-## Snabbval: rekommenderade serier för trendbevakning (finns i `config/watchlist_aml_fraud.json`)
+## Snabbval: rekommenderade serier för trendbevakning (finns i `brastat/config/watchlist_aml_fraud.json`)
 
 | Signal | Välj i SOL | Nivå |
 |---|---|---|
