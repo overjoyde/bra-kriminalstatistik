@@ -10,7 +10,9 @@ cycler==0.12.1
     # via matplotlib
 et-xmlfile==2.0.0
     # via openpyxl
-fonttools==4.65.0
+fonttools==4.65.0 ; python_full_version < '3.11'
+    # via matplotlib
+fonttools==4.68.0 ; python_full_version >= '3.11'
     # via matplotlib
 kiwisolver==1.5.1
     # via matplotlib
@@ -30,7 +32,7 @@ numpy==2.4.6 ; python_full_version == '3.11.*'
     #   contourpy
     #   matplotlib
     #   pandas
-numpy==2.5.3 ; python_full_version >= '3.12'
+numpy==2.5.4 ; python_full_version >= '3.12'
     # via
     #   -r requirements.txt
     #   contourpy
@@ -42,23 +44,31 @@ packaging==26.3
     # via matplotlib
 pandas==2.3.3 ; python_full_version < '3.11'
     # via -r requirements.txt
-pandas==3.0.6 ; python_full_version >= '3.11'
+pandas==3.1.0 ; python_full_version >= '3.11'
     # via -r requirements.txt
-pillow==12.3.0
+pillow==12.3.0 ; python_full_version < '3.11'
+    # via matplotlib
+pillow==13.0.0 ; python_full_version >= '3.11'
     # via matplotlib
 pyparsing==3.3.3
     # via matplotlib
-python-dateutil==2.9.0.post0
+python-dateutil==3.0.0 ; python_full_version < '3.11'
     # via
     #   matplotlib
     #   pandas
-pytz==2026.3.post1 ; python_full_version < '3.11'
+python-dateutil==4.0.0 ; python_full_version >= '3.11'
+    # via
+    #   matplotlib
+    #   pandas
+pytz==2026.6 ; python_full_version < '3.11'
     # via pandas
-six==1.17.0
+six==1.17.0 ; python_full_version < '3.11'
     # via python-dateutil
-truststore==0.10.4
+truststore==0.10.5
     # via -r requirements.txt
-tzdata==2026.4 ; python_full_version < '3.11' or sys_platform == 'emscripten' or sys_platform == 'win32'
-    # via pandas
+tzdata==2026.6
+    # via
+    #   pandas
+    #   python-dateutil
 xlrd==2.0.2
     # via -r requirements.txt
